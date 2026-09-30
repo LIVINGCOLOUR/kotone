@@ -63,7 +63,7 @@
   .menu summary { list-style: none; cursor: pointer; font-size: 13px; padding: 5px 10px; border-radius: 7px;
     border: 1px solid var(--border); background: var(--chip); }
   .menu summary::-webkit-details-marker { display: none; }
-  .menu-body { position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; background: var(--panel);
+  .menu-body { position: absolute; right: 0; top: calc(100% + 4px); max-width: calc(100vw - 16px); z-index: 20; background: var(--panel);
     border: 1px solid var(--border); border-radius: 10px; padding: 6px; display: grid; gap: 4px; min-width: 190px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, .15); }
   .menu-body button { text-align: left; background: transparent; border-color: transparent; }
@@ -198,6 +198,16 @@
   .legend i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; vertical-align: -1px; margin-right: 3px; border: 1px solid var(--border); }
 
   /* 狭い画面・低い画面では、ページ全体をスクロールする縦並びに戻す */
+  .menu.left .menu-body { right: auto; left: 0; }
+  /* 幅が狭いときは上のバーの見出しの文字を省いて1段に収める（マウスを乗せると名前が出る） */
+  @media (max-width: 1240px) { .bar .lbl { display: none; } .brand { padding-right: 6px; } }
+  @media (max-width: 1120px) {
+    .title { width: 96px; }
+    #instrument { max-width: 110px; }
+    #pattern { max-width: 96px; }
+    .bar .sep, .bar h2 { display: none; }
+    header.bar > button, .menu summary { padding: 5px 8px; }
+  }
   @media (max-width: 860px), (max-height: 600px) {
     body { overflow: auto; }
     .app { height: auto; }
@@ -213,16 +223,16 @@
   <header class="bar">
     <span class="brand" title="Kotone ― 言（こと）と音（ね）">Kotone</span>
     <input id="title" class="title" aria-label="曲名">
-    <label>キー <select id="key"></select></label>
-    <label>テンポ <input id="bpm" type="number" min="40" max="240"></label>
-    <label>伴奏
+    <label title="キー"><span class="lbl">キー</span> <select id="key"></select></label>
+    <label title="テンポ"><span class="lbl">テンポ</span> <input id="bpm" type="number" min="40" max="240"></label>
+    <label title="伴奏"><span class="lbl">伴奏</span>
       <select id="pattern">
         <option value="block">ジャーン</option>
         <option value="8beat">8ビート</option>
         <option value="arp">アルペジオ</option>
       </select>
     </label>
-    <label>音源
+    <label title="音源"><span class="lbl">音源</span>
       <select id="instrument">
         <option value="piano">ピアノ</option>
         <option value="acoustic">アコギ</option>
@@ -238,16 +248,6 @@
     <button id="rec">● 録音</button>
     <div class="spacer"></div>
     <span id="status" class="status"></span>
-    <details class="menu" id="fileMenu">
-      <summary>ファイル ▾</summary>
-      <div class="menu-body">
-        <button id="midi">MIDI書き出し</button>
-        <button id="copyText">コード譜をコピー</button>
-        <button id="saveJson">ファイルに保存</button>
-        <button id="loadJson">ファイルを開く</button>
-        <button id="newSong">新規</button>
-      </div>
-    </details>
   </header>
 
   <div class="bar">
@@ -262,6 +262,16 @@
     <div class="row" id="arrange"></div>
     <select id="addArr"></select>
     <div class="spacer"></div>
+    <details class="menu" id="fileMenu">
+      <summary>ファイル ▾</summary>
+      <div class="menu-body">
+        <button id="midi">MIDI書き出し</button>
+        <button id="copyText">コード譜をコピー</button>
+        <button id="saveJson">ファイルに保存</button>
+        <button id="loadJson">ファイルを開く</button>
+        <button id="newSong">新規</button>
+      </div>
+    </details>
     <a class="manual-link" href="manual.html" target="_blank">使い方 ↗</a>
   </div>
 
@@ -2282,6 +2292,14 @@ $('#preset').onchange = e => {
 
 // ファイルメニュー（項目を選んだら閉じる）
 const closeMenu = () => $('#fileMenu').removeAttribute('open');
+// メニューが画面の外にはみ出さない向きに開く
+$('#fileMenu').addEventListener('toggle', () => {
+  const m = $('#fileMenu');
+  if (!m.open) return;
+  m.classList.remove('left');
+  const body = m.querySelector('.menu-body');
+  if (body.getBoundingClientRect().left < 8) m.classList.add('left');
+});
 document.addEventListener('click', e => { if (!e.target.closest('#fileMenu')) closeMenu(); });
 $('#midi').onclick = () => { closeMenu(); exportMidi(); };
 $('#copyText').onclick = async () => {
