@@ -1,0 +1,7 @@
+{
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  // Cloudflare Pages（https://kotonemusic.pages.dev）で公開する。dist は deploy.sh が作る
+  "name": "kotonemusic",
+  "compatibility_date": "2026-09-01",
+  "pages_build_output_dir": "./dist"
+}
