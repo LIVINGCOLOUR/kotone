@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kotone 使い方</title>
+<style>
+  :root {
+    --bg: #f6f5f2; --panel: #ffffff; --text: #1f2328; --muted: #6b7280;
+    --border: #e3e1dc; --accent: #d9485f; --accent-soft: #fde8ec;
+    --chip: #f0efeb; --ok: #d8f0dc; --avoid: #fbe3c8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16171a; --panel: #1f2126; --text: #e8e8ea; --muted: #9a9ca3;
+      --border: #30333a; --accent: #ff6b81; --accent-soft: #3a2228;
+      --chip: #2a2d33; --ok: #274231; --avoid: #4a3620;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 16px; }
+  body { margin: 0; background: var(--bg); color: var(--text); line-height: 1.8;
+    font-family: "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif; font-size: 15px; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 16px 80px; display: grid;
+    grid-template-columns: 220px minmax(0, 1fr); gap: 32px; }
+  @media (max-width: 800px) { .wrap { grid-template-columns: 1fr; gap: 16px; } nav { position: static !important; } }
+  header { grid-column: 1 / -1; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  .lead { color: var(--muted); margin: 0; }
+  .back { display: inline-block; margin-top: 10px; color: var(--accent); font-weight: 600; text-decoration: none; }
+  nav { position: sticky; top: 16px; align-self: start; font-size: 14px; }
+  nav ol { margin: 0; padding: 12px 12px 12px 32px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; }
+  nav a { color: var(--text); text-decoration: none; }
+  nav a:hover { color: var(--accent); }
+  article section { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 24px; margin-bottom: 16px; }
+  h2 { font-size: 20px; margin: 0 0 12px; padding-bottom: 8px; border-bottom: 2px solid var(--accent-soft); }
+  h3 { font-size: 16px; margin: 20px 0 6px; }
+  p { margin: 8px 0; }
+  ul, ol { padding-left: 1.4em; margin: 8px 0; }
+  li { margin: 2px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 10px 0; display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--chip); font-weight: 600; white-space: nowrap; }
+  kbd { font-family: ui-monospace, monospace; font-size: 12px; padding: 1px 6px; border-radius: 4px;
+    border: 1px solid var(--border); background: var(--chip); white-space: nowrap; }
+  .ui { display: inline-block; font-size: 13px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--chip); white-space: nowrap; }
+  .tip { background: var(--accent-soft); border-radius: 10px; padding: 10px 14px; margin: 12px 0; }
+  .tip strong { color: var(--accent); }
+  .note { color: var(--muted); font-size: 14px; }
+  .sw { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; border: 1px solid var(--border); }
+  .steps { counter-reset: s; list-style: none; padding: 0; }
+  .steps li { counter-increment: s; position: relative; padding-left: 38px; margin: 10px 0; }
+  .steps li::before { content: counter(s); position: absolute; left: 0; top: 1px; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-size: 13px; font-weight: 700; display: grid; place-items: center; }
+  .chords { font-family: ui-monospace, monospace; font-size: 14px; white-space: nowrap; }
+  .fn { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--text); color: var(--panel); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Kotone 使い方</h1>
+    <p class="lead">Kotone（言＋音）は、コード進行・メロディ・歌詞をひとつの画面で作れる、J-POP向けの作曲ツールです。</p>
+    <a class="back" href="index.html">← アプリに戻る</a>
+  </header>
+
+  <nav>
+    <ol>
+      <li><a href="#quick">まずは5分で試す</a></li>
+      <li><a href="#screen">画面の見方</a></li>
+      <li><a href="#chords">コード進行を作る</a></li>
+      <li><a href="#edit">コードを編集する</a></li>
+      <li><a href="#sections">セクションと曲の構成</a></li>
+      <li><a href="#sound">再生と音源</a></li>
+      <li><a href="#melody">メロディを作る</a></li>
+      <li><a href="#lyrics">歌詞に合わせて作る</a></li>
+      <li><a href="#keyboard">鍵盤の見方</a></li>
+      <li><a href="#export">保存と書き出し</a></li>
+      <li><a href="#keys">ショートカット</a></li>
+      <li><a href="#theory">作曲のヒント</a></li>
+      <li><a href="#faq">困ったとき</a></li>
+    </ol>
+  </nav>
+
+  <article>
+    <section id="quick">
+      <h2>1. まずは5分で試す</h2>
+      <ol class="steps">
+        <li>上の <span class="ui">キー</span> で調を選びます。迷ったら <b>C メジャー</b> のままで大丈夫です。</li>
+        <li>右側の「最初のコード」の候補から1つクリックします（例：C）。音が鳴り、中央のコードトラックに追加されます。</li>
+        <li>すぐに「C の次の候補」が出るので、気になるものの <span class="ui">▶</span> で試聴して、気に入ったらクリックします。これを4〜8回くり返します。</li>
+        <li><kbd>Space</kbd> を押すと、作った進行がループ再生されます。</li>
+        <li>再生しながら画面下の鍵盤（赤い音が中心）を弾いて、メロディを探します。いいフレーズが浮かんだら <kbd>R</kbd> で録音するか、ピアノロールをクリックして音を置きます。</li>
+        <li>できたら <span class="ui">ファイル ▾</span> → <span class="ui">MIDI書き出し</span> で、DAWに持っていきます。</li>
+      </ol>
+      <div class="tip"><strong>コツ：</strong>迷ったら <span class="ui">定番から始める</span> で「王道進行」などを読み込み、1つずつ差し替えていくと早いです。</div>
+    </section>
+
+    <section id="screen">
+      <h2>2. 画面の見方</h2>
+      <p>曲作りに必要なものが1画面に収まるように並んでいます（ページ全体はスクロールしません）。</p>
+      <table>
+        <tr><th>場所</th><th>内容</th></tr>
+        <tr><td>いちばん上のバー</td><td>曲名（クリックで書き換え）、キー、テンポ、伴奏、音源、ドラム、ループ、<span class="ui">▶ 再生</span> <span class="ui">▶ 曲全体</span> <span class="ui">● 録音</span>、<span class="ui">ファイル ▾</span>（書き出し・保存）</td></tr>
+        <tr><td>2段目のバー</td><td>セクション（Aメロ・Bメロ・サビなど）の切り替えと、曲の並び順。右端にこの使い方へのリンク</td></tr>
+        <tr><td>中央（左）</td><td>今のセクションの作業場所。上から<b>コードトラック</b>（コードが小節の長さで並ぶ）、<b>ピアノロール</b>（メロディ）、<b>編集欄</b>（選んでいるコードや音の設定）。コードとメロディは同じ時間軸でそろっています</td></tr>
+        <tr><td>中央（右）</td><td><span class="ui">コード候補</span> と <span class="ui">歌詞</span> のタブ。コード候補は次に置く（または差し替える）コードの一覧、歌詞は今のセクションの歌詞の編集欄です</td></tr>
+        <tr><td>いちばん下</td><td>鍵盤とギターのコードダイアグラム。<span class="ui">隠す ▾</span> で折りたためます</td></tr>
+      </table>
+      <p class="note">画面が狭い・低いときは、縦に並んでページ全体をスクロールする表示に切り替わります。</p>
+    </section>
+
+    <section id="chords">
+      <h2>3. コード進行を作る</h2>
+      <h3>候補の読み方</h3>
+      <table>
+        <tr><th>表示</th><th>意味</th></tr>
+        <tr><td>左の数字</td><td>キーボードの <kbd>1</kbd>〜<kbd>9</kbd> で選べる番号</td></tr>
+        <tr><td>大きな文字</td><td>コード名（例：Am）</td></tr>
+        <tr><td>小さな文字</td><td>度数（キーの中で何番目のコードか。例：Ⅵm）。キーを変えても進行の形が分かります</td></tr>
+        <tr><td>黒いラベル</td><td>コードの役割。<span class="fn">T</span> 安定、<span class="fn">SD</span> 広がり、<span class="fn">D</span> 緊張（Ⅰに帰りたい）、<span class="fn">→Ⅵm</span> などは「そこへ向かうための一時的な緊張」</td></tr>
+        <tr><td>赤いバーと％</td><td>その流れのよく使われる度合い。J-POPの定番ルールから計算しています</td></tr>
+        <tr><td>タグ</td><td>「定番」「切ない」「偽終止」などの雰囲気。<b>赤いタグ</b>は「王道進行の続き」「サビへつながる」など、特に推している理由</td></tr>
+        <tr><td>タグの後ろの説明文</td><td>そのコードがどんな響きか。長いときは省略されるので、マウスを乗せると全文が出ます</td></tr>
+      </table>
+      <h3>候補を選ぶ方法</h3>
+      <ul>
+        <li><b>クリック</b>または <kbd>1</kbd>〜<kbd>9</kbd>：進行に追加します</li>
+        <li><span class="ui">▶</span>：追加せずに試聴だけします</li>
+        <li><span class="ui">おまかせで1つ</span>／<span class="ui">おまかせで4つ</span>：％の確率に従ってランダムに選びます。アイデアに詰まったときに</li>
+        <li><span class="ui">定番から始める</span>：王道進行・小室進行・カノン進行などをまるごと読み込みます（今のセクションの進行は置き換わります）</li>
+      </ul>
+      <h3>定番 ⟷ 冒険 スライダー</h3>
+      <p>左に寄せると定番のコードがより上に、右に寄せると普段あまり使わないコードが上に来ます。真ん中が標準です。「おまかせ」にも効くので、右に寄せておまかせを押すと意外な進行が出てきます。</p>
+      <h3>有名な進行の検出</h3>
+      <p>進行が王道進行などの途中になっていると、進行エリアの下に「♪ 王道進行 の流れに乗っています」と表示され、その続きのコードが候補の上位に来ます。</p>
+    </section>
+
+    <section id="edit">
+      <h2>4. コードを編集する</h2>
+      <p>コードトラックのブロックをクリック（または <kbd>←</kbd><kbd>→</kbd>）で選ぶと、ピアノロールの下の編集欄がピンクになり、設定を変えられます。</p>
+      <table>
+        <tr><th>項目</th><th>できること</th></tr>
+        <tr><td>長さ</td><td>1拍／2拍／1小節／2小節。サビで2拍ずつコードを変えたいときなどに</td></tr>
+        <tr><td>味付け</td><td>基本／7th／add9／sus4。7th はキーに合った種類（CM7、G7、Am7 など）が自動で選ばれます</td></tr>
+        <tr><td>ベース</td><td>根音／3度／5度。3度にすると C/E のような分数コード（オンコード）になり、ベースラインがなめらかになります</td></tr>
+        <tr><td>削除／選択解除</td><td>ブロックの削除、または選択をやめる（<kbd>Esc</kbd> でも可）</td></tr>
+      </table>
+      <h3>途中のコードを差し替える</h3>
+      <p>ブロックを選んでいる間は、右の候補の一覧が「〇〇 を差し替える候補」に変わり、<b>前のコードからも、後ろのコードへも自然につながる</b>順に並びます。「後ろにつながる」タグが付いたものは、次のコードへの流れが特に良いものです。選んだコードはそのまま差し替わり、選択は残るので、次々に試せます。</p>
+      <h3>おしゃれ化</h3>
+      <p>今のセクションの三和音をまとめて7thにし、Ⅰの直前のⅤを Ⅳ/Ⅴ（C のキーなら F/G）に置き換えます。シティポップっぽい雰囲気が手早く出せます。</p>
+    </section>
+
+    <section id="sections">
+      <h2>5. セクションと曲の構成</h2>
+      <ul>
+        <li><b>セクションのタブ</b>：クリックで切り替え、ダブルクリックで名前を変更、<span class="ui">×</span> で削除します。<span class="ui">＋ セクション追加</span> からイントロ・Cメロ・間奏なども足せます。</li>
+        <li><b>曲の並び</b>：曲の構成順です（例：Aメロ → Bメロ → サビ → Aメロ …）。同じセクションを何度でも並べられます。<span class="ui">‹</span> で左へ移動、<span class="ui">×</span> で外します。</li>
+        <li><span class="ui">▶ 曲全体</span>（<kbd>Shift</kbd>+<kbd>Space</kbd>）：並び順に通して再生します。再生中のセクションに画面が自動で切り替わります。</li>
+      </ul>
+      <h3>セクション同士をつなげる</h3>
+      <p>セクションの最後の方を作っていると、<b>曲の並びで次に来るセクションの最初のコードへ自然につながる候補</b>に「サビへつながる」などの赤いタグが付きます。前のセクションの流れも引き継いで候補を出します。</p>
+      <h3>転調</h3>
+      <p>セクションごとに <span class="ui">転調</span> で半音単位にキーを上下できます（例：最後のサビだけ +1）。次のセクションが転調していると、今のセクションの最後に<b>転調先のⅤ7</b>が「サビへ転調」として提案されます。これを置くと、自然に新しいキーへ入れます。</p>
+    </section>
+
+    <section id="sound">
+      <h2>6. 再生と音源</h2>
+      <table>
+        <tr><th>設定</th><th>内容</th></tr>
+        <tr><td>テンポ</td><td>40〜240。メロディを録音するときは少し遅めにすると弾きやすいです</td></tr>
+        <tr><td>伴奏</td><td><b>ジャーン</b>：コードを伸ばす／<b>8ビート</b>：J-POPの刻み／<b>アルペジオ</b>：分散和音</td></tr>
+        <tr><td>音源</td><td>ピアノ、アコースティックギター、ナイロンギター、エレキギター（クリーン）</td></tr>
+        <tr><td>ドラム</td><td>シンプルな8ビートのドラムを重ねます</td></tr>
+        <tr><td>ループ</td><td>オンにするとくり返し再生します。再生中に進行を編集すると、次の周から反映されます</td></tr>
+      </table>
+      <h3>ギター音源について</h3>
+      <ul>
+        <li>コードごとに、<b>実際に押さえられるフォーム</b>（開放弦、バレーを含む）を自動で探して鳴らします。押さえ方は画面下のダイアグラムに表示されます（×はミュート、○は開放弦、右の数字はフレット位置）。</li>
+        <li>8ビートでは「ダウン・ダウンアップ・アップダウンアップ」のストロークで刻みます。</li>
+        <li>ギターを選んでいるときは、別のベース音は鳴らしません（ギターの最低音がベースの役割をします）。</li>
+      </ul>
+      <p class="note">ピアノとギターの音は、最初に音を出したときにインターネットから読み込みます。読み込み中やオフラインのときはシンセの音で代わりに鳴ります。状態は画面右上に表示されます。</p>
+    </section>
+
+    <section id="melody">
+      <h2>7. メロディを作る</h2>
+      <p>メロディの作り方は2つあります。<b>ピアノロールで1音ずつ置く</b>方法と、<b>弾いて録音する</b>方法です。組み合わせて使えます（録音してからピアノロールで直す、など）。</p>
+      <h3>ピアノロールで編集する</h3>
+      <p>ピアノロールは、横が時間（上のコードトラックとそろっています）、縦が音の高さです。<b>各コードの区間で、そのコードの構成音の行が薄い赤で色づいている</b>ので、その行に置けば安定します。</p>
+      <table>
+        <tr><th>操作</th><th>動作</th></tr>
+        <tr><td>空いている所をクリック</td><td>音を追加（そのまま右へドラッグで長さを決める）。長さは前回の長さを引き継ぎます</td></tr>
+        <tr><td>音をドラッグ</td><td>移動（左右で時間、上下で高さ）</td></tr>
+        <tr><td>音の右端をドラッグ</td><td>長さを変える</td></tr>
+        <tr><td>音をダブルクリック／右クリック</td><td>削除</td></tr>
+        <tr><td>音を選んで <kbd>↑</kbd> <kbd>↓</kbd></td><td>半音ずつ上下（<kbd>Shift</kbd> を押しながらでオクターブ）</td></tr>
+        <tr><td>音を選んで <kbd>←</kbd> <kbd>→</kbd></td><td>スナップの単位で前後に移動</td></tr>
+        <tr><td>音を選んで <kbd>Backspace</kbd></td><td>削除</td></tr>
+      </table>
+      <p>音を選ぶと、下の編集欄で長さ（16分〜全音符）を選んだり削除したりできます。上の <span class="ui">スナップ</span> で、置いたり動かしたりするときの刻み（16分・8分・4分）を変えられます。</p>
+      <p><b>オレンジの音</b>は、そのコードとぶつかりやすい音（構成音の半音上）を、強拍に置いたり長く伸ばしたりしている音です。わざとでなければ、隣の音にずらしてみてください。</p>
+      <h3>弾いて録音する</h3>
+      <ol class="steps">
+        <li>メロディを付けたいセクションのコード進行を作っておきます（コードがないと録音できません）。</li>
+        <li><kbd>R</kbd>（または <span class="ui">● 録音</span>）を押すと、ループ再生と録音が始まります。</li>
+        <li>キーボードで弾きます。<kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> <kbd>F</kbd> <kbd>G</kbd> <kbd>H</kbd> <kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd> <kbd>;</kbd> が白鍵（ド〜ミ）、<kbd>W</kbd> <kbd>E</kbd> <kbd>T</kbd> <kbd>Y</kbd> <kbd>U</kbd> <kbd>O</kbd> <kbd>P</kbd> が黒鍵、<kbd>Z</kbd>／<kbd>X</kbd> でオクターブを移動します。</li>
+        <li>もう一度 <kbd>R</kbd> で録音を止めます（再生は続きます）。記録した音はピアノロールに表示され、次の周からコードと一緒に鳴ります。</li>
+      </ol>
+      <ul>
+        <li>弾いたタイミングは16分音符単位にそろえられます。</li>
+        <li>ループを重ねて弾くと<b>上書きではなく追加</b>されます。前半と後半に分けて少しずつ作れます。</li>
+        <li>間違えた音は、ピアノロールでダブルクリックして消せます。<span class="ui">メロディを消す</span>（何も選んでいないときの編集欄）で、そのセクションのメロディをまるごと消せます。</li>
+      </ul>
+    </section>
+
+    <section id="lyrics">
+      <h2>7-2. 歌詞に合わせて作る</h2>
+      <p>自分で書いた歌詞を登録して、歌詞とメロディを結びつけながら作曲できます。歌詞はセクションごとに、<b>1番・2番・3番…</b>と持てます（コードとメロディは全部の番で共通で、歌詞だけが番ごとに違います）。</p>
+      <h3>1曲分の歌詞をまとめて貼り付ける</h3>
+      <ol class="steps">
+        <li>歌詞タブの <span class="ui">曲全体の歌詞を貼り付け・編集…</span> を押します。</li>
+        <li>左の欄に1曲分の歌詞を貼り付けます。<b>Aメロ・Bメロ・サビなどの間は空行で区切って</b>ください。</li>
+        <li><span class="ui">自動で割り当て</span> を押すと、何度も出てくる似たブロックをサビ、その間を Aメロ・Bメロ（2回目のサビの後の1ブロックは Cメロ）と推測します。</li>
+        <li>右の一覧で、ブロックごとにセクションを選び直せます（左の歌詞に <code>[サビ]</code> のような見出しが書き込まれます）。一覧のブロックをクリックすると、左の歌詞のその場所へ移動します。</li>
+        <li><span class="ui">反映する</span> を押すと、歌詞がそれぞれのセクションの1番・2番…に入り、<b>曲の並びも歌詞の順に置き換わります</b>。ないセクションは新しく作ります（↶ で元に戻せます）。</li>
+      </ol>
+      <p>歌詞の中に <code>[Aメロ]</code> <code>【サビ】</code> <code>[Chorus]</code> のような見出し行を書いておくこともできます（A・B・C、verse・chorus・bridge なども読み替えます）。<code>[間奏]</code> のように歌詞のない見出しも並びに入れられます。</p>
+      <p>もう一度開くと、今の曲の歌詞が見出し付きで表示されるので、<b>曲全体の歌詞をここでまとめて直す</b>こともできます。</p>
+      <h3>番ごとの歌詞</h3>
+      <p>同じセクションが曲の並びに2回以上出てくると、歌詞タブに <span class="ui">1番</span> <span class="ui">2番</span> の切り替えが出ます。曲の並びのチップにも「2番」と表示され、クリックするとその番の歌詞が開きます。曲全体を再生すると、ピアノロールの歌詞も今歌っている番に切り替わります。番ごとの音の数も表示されるので、同じメロディに乗るかを確かめられます。</p>
+      <h3>セクションごとに書く</h3>
+      <p>右のパネルの <span class="ui">歌詞</span> タブで、今のセクション（と番）の歌詞を直接書いたり直したりできます。<b>1行が1フレーズ</b>です。</p>
+
+      <h3>メロディと歌詞を結びつけながら作る</h3>
+      <p>メロディは自分で考えて置いていきます。置いた音符には、<b>時間の順に歌詞が1音ずつ自動で付きます</b>。どの音にどの歌詞が付くかは、次の場所で見ながら作れます。</p>
+      <table>
+        <tr><th>場所</th><th>見えるもの</th></tr>
+        <tr><td>歌詞レーン（コードとピアノロールの間の「歌詞」の行）</td><td>各音符の真上に、その音で歌う歌詞。行の頭には行番号。最後の音の後ろには、<b>次に歌う歌詞</b>（赤）と、その先の歌詞（薄い字）が並びます</td></tr>
+        <tr><td>ピアノロールの空いている所にマウスを乗せる</td><td>そこに音を置いたら付く歌詞が、点線の影の音符と一緒に出ます。途中に音を入れると、その位置の歌詞が入り、後ろの歌詞は1つずつ後ろへずれます</td></tr>
+        <tr><td>下の編集欄（何も選んでいないとき）</td><td>「次の歌詞「だ」」のように、次に付く歌詞</td></tr>
+        <tr><td>再生中の歌詞レーン</td><td>今歌っている歌詞が赤く光ります（カラオケのように）</td></tr>
+      </table>
+      <p>鍵盤で弾いて録音するときも、歌詞レーンの「次に歌う歌詞」を見ながら弾けば、歌詞に合ったメロディを作れます。</p>
+
+      <h3>のばし（1つの歌詞を複数の音で歌う）</h3>
+      <p>「あ〜〜」のように1つの歌詞で音を動かすときは、2つ目以降の音を<b>のばし</b>にします。のばしの音は歌詞を使わず「ー」と表示され、次の歌詞は次の音に付きます。</p>
+      <ul>
+        <li>音を選んで <kbd>-</kbd> キー、または編集欄の <span class="ui">ー のばし</span> で切り替え</li>
+        <li>歌詞レーンの文字をダブルクリックしても切り替えられます（クリックはその音を選ぶ）</li>
+      </ul>
+
+      <h3>音の数え方</h3>
+      <p>日本語の歌は「1つの音符に1つの音（モーラ）」が基本なので、歌詞を次のように数えて音符に割り当てます。</p>
+      <table>
+        <tr><th>歌詞</th><th>数え方</th><th>例</th></tr>
+        <tr><td>かな1文字</td><td>1音</td><td>そ・ら（2音）</td></tr>
+        <tr><td>小さい「ゃゅょ」など</td><td>前の文字とまとめて1音</td><td>きゃ・り（2音）</td></tr>
+        <tr><td>「ん」</td><td>1音</td><td>み・か・ん（3音）</td></tr>
+        <tr><td>「っ」「ー」</td><td>前の音にまとめる（歌詞タブの設定で1音にもできる）</td><td>ずっ・と（2音）、ラー・メ・ン（3音）</td></tr>
+        <tr><td>漢字</td><td><b>読みを <code>夢(ゆめ)</code> のように書く</b>と読みで数える。書かないと1字1音</td><td>夢(ゆめ) → ゆ・め（2音）</td></tr>
+        <tr><td>英語</td><td>1単語1音。ハイフンで分けられる</td><td>love（1音）、lo-ve（2音）</td></tr>
+        <tr><td>句読点・空白</td><td>数えない</td><td></td></tr>
+      </table>
+      <p>歌詞タブの下に「歌詞 24音 ／ メロディ 16音＋のばし1（音符があと8個足りません）」のように表示されます。行ごと・番ごとの音の数も出るので、フレーズの長さをそろえる目安にしてください。</p>
+      <p class="note">歌詞は MIDI にも書き出され（のばしの音には付けません）、DAW で歌詞として表示されます。<span class="ui">コード譜をコピー</span> にも歌詞が入ります。</p>
+    </section>
+
+    <section id="keyboard">
+      <h2>8. 鍵盤の見方</h2>
+      <p>画面下の鍵盤は、<b>今のコードの上でどの音をメロディに使うとよいか</b>を色で示します。選んでいるコード（再生中は鳴っているコード、何も選んでいなければ最後のコード）が基準です。</p>
+      <table>
+        <tr><th>色</th><th>意味</th><th>使い方</th></tr>
+        <tr><td><span class="sw" style="background:var(--accent)"></span> 赤</td><td>コードの構成音</td><td>小節の頭や、長く伸ばす音に置くと安定します</td></tr>
+        <tr><td><span class="sw" style="background:var(--ok)"></span> 緑</td><td>キーの音階の中の、使いやすい音</td><td>経過音や、動きをつける音に向いています</td></tr>
+        <tr><td><span class="sw" style="background:var(--avoid)"></span> オレンジ</td><td>ぶつかりやすい音（構成音の半音上）</td><td>伸ばすと濁りやすい音です。通り過ぎるだけなら使えます</td></tr>
+        <tr><td>色なし</td><td>キーの音階の外の音</td><td>意図がないと浮きやすい音です</td></tr>
+      </table>
+      <p>鍵盤はクリックでも鳴らせます。鍵盤に書いてあるアルファベットが、対応するPCのキーです。</p>
+    </section>
+
+    <section id="export">
+      <h2>9. 保存と書き出し</h2>
+      <p>書き出しや保存は、いちばん上のバーの <span class="ui">ファイル ▾</span> にまとまっています。</p>
+      <table>
+        <tr><th>項目</th><th>内容</th></tr>
+        <tr><td>元に戻す</td><td>編集欄の上の <span class="ui">↶</span> <span class="ui">↷</span>、または <kbd>Cmd</kbd>+<kbd>Z</kbd>／<kbd>Shift</kbd>+<kbd>Cmd</kbd>+<kbd>Z</kbd>（Windows は <kbd>Ctrl</kbd>）で、操作を取り消したりやり直したりできます。クリアや削除も戻せます。</td></tr>
+        <tr><td>自動保存</td><td>作業内容は、操作するたびにこのブラウザに自動で保存されます。</td></tr>
+        <tr><td><span class="ui">MIDI書き出し</span></td><td>曲の並び順で <code>.mid</code> を書き出します。トラックは Chords（コード）、Bass、Melody、Drums の4つです。セクション名はマーカー、コード名はテキストとして入ります。コードは全音符のブロックなので、刻み方はDAW側で付けてください。</td></tr>
+        <tr><td><span class="ui">コード譜をコピー</span></td><td>「【Aメロ】| C | G | Am | F |」のような文字のコード譜をクリップボードにコピーします。メモや共有に。</td></tr>
+        <tr><td><span class="ui">ファイルに保存</span>／<span class="ui">ファイルを開く</span></td><td>曲を <code>.json</code> ファイルとして保存・読み込みします。複数の曲を管理したいときや、バックアップに。</td></tr>
+        <tr><td><span class="ui">新規</span></td><td>新しい曲を始めます。今の曲は消えるので、残したいときは先に「ファイルに保存」してください。</td></tr>
+      </table>
+      <div class="tip"><strong>DAWへの取り込み：</strong>書き出した <code>.mid</code> をDAWのトラック欄にドラッグします。Cubase、Logic、Studio One、Ableton Live などでは、トラックごとに分かれて読み込まれます。テンポも一緒に入ります。</div>
+    </section>
+
+    <section id="keys">
+      <h2>10. ショートカット</h2>
+      <table>
+        <tr><th>キー</th><th>動作</th></tr>
+        <tr><td><kbd>Space</kbd></td><td>今のセクションを再生／停止</td></tr>
+        <tr><td><kbd>Shift</kbd>+<kbd>Space</kbd></td><td>曲全体を再生／停止</td></tr>
+        <tr><td><kbd>1</kbd>〜<kbd>9</kbd></td><td>候補を選ぶ（追加、または選択中のコードを差し替え）</td></tr>
+        <tr><td><kbd>Cmd</kbd>+<kbd>Z</kbd>／<kbd>Shift</kbd>+<kbd>Cmd</kbd>+<kbd>Z</kbd></td><td>元に戻す／やり直す（Windows は <kbd>Ctrl</kbd>）</td></tr>
+        <tr><td><kbd>Backspace</kbd></td><td>選んでいる音やコードを消す（何も選んでいなければ最後のコード）</td></tr>
+        <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>コードを選択（音を選んでいるときは音を前後に移動）</td></tr>
+        <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>選んでいる音を半音上下（<kbd>Shift</kbd> でオクターブ）</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>選択を解除</td></tr>
+        <tr><td><kbd>R</kbd></td><td>録音の開始／終了</td></tr>
+        <tr><td><kbd>A</kbd>〜<kbd>;</kbd>、<kbd>W</kbd> <kbd>E</kbd> <kbd>T</kbd> <kbd>Y</kbd> <kbd>U</kbd> <kbd>O</kbd> <kbd>P</kbd></td><td>鍵盤を弾く</td></tr>
+        <tr><td><kbd>Z</kbd> <kbd>X</kbd></td><td>鍵盤のオクターブを下げる／上げる</td></tr>
+      </table>
+      <p class="note">曲名やテンポの入力欄に文字を入力している間は、ショートカットは効きません。</p>
+    </section>
+
+    <section id="theory">
+      <h2>11. 作曲のヒント</h2>
+      <h3>コードの3つの役割</h3>
+      <table>
+        <tr><th>役割</th><th>C メジャーの例</th><th>感じ</th></tr>
+        <tr><td><span class="fn">T</span> トニック</td><td class="chords">C, Am, Em</td><td>安定、落ち着く、帰ってきた</td></tr>
+        <tr><td><span class="fn">SD</span> サブドミナント</td><td class="chords">F, Dm</td><td>広がる、動き出す</td></tr>
+        <tr><td><span class="fn">D</span> ドミナント</td><td class="chords">G, G7</td><td>緊張、トニックへ帰りたくなる</td></tr>
+      </table>
+      <p>基本の流れは <b>T → SD → D → T</b> です。これを崩したり（D から Am へ行く「偽終止」など）、借りてきたコード（Fm などの「借用和音」）を混ぜたりすると、表情が出ます。</p>
+
+      <h3>アプリに入っている有名な進行</h3>
+      <table>
+        <tr><th>名前</th><th>度数</th><th>C メジャー（A マイナー）の例</th></tr>
+        <tr><td>王道進行</td><td>Ⅳ–Ⅴ–Ⅲm–Ⅵm</td><td class="chords">F G Em Am</td></tr>
+        <tr><td>小室進行</td><td>Ⅵm–Ⅳ–Ⅴ–Ⅰ</td><td class="chords">Am F G C</td></tr>
+        <tr><td>カノン進行</td><td>Ⅰ–Ⅴ–Ⅵm–Ⅲm–Ⅳ–Ⅰ–Ⅳ–Ⅴ</td><td class="chords">C G Am Em F C F G</td></tr>
+        <tr><td>丸サ進行</td><td>ⅣM7–Ⅲ7–Ⅵm7–Ⅴm7–Ⅰ7</td><td class="chords">FM7 E7 Am7 Gm7 C7</td></tr>
+        <tr><td>1645進行</td><td>Ⅰ–Ⅵm–Ⅳ–Ⅴ</td><td class="chords">C Am F G</td></tr>
+        <tr><td>1564進行</td><td>Ⅰ–Ⅴ–Ⅵm–Ⅳ</td><td class="chords">C G Am F</td></tr>
+        <tr><td>ツーファイブワン</td><td>Ⅱm7–Ⅴ7–Ⅰ</td><td class="chords">Dm7 G7 C</td></tr>
+        <tr><td>短調ドラマチック</td><td>Ⅰm–♭Ⅵ–♭Ⅶ–Ⅴ7</td><td class="chords">Am F G E7</td></tr>
+        <tr><td>♭Ⅵ-♭Ⅶ-Ⅰm</td><td>♭Ⅵ–♭Ⅶ–Ⅰm</td><td class="chords">F G Am</td></tr>
+        <tr><td>短調のツーファイブ</td><td>Ⅱm7(♭5)–Ⅴ7–Ⅰm</td><td class="chords">Bm7(♭5) E7 Am</td></tr>
+      </table>
+
+      <h3>メロディの基本</h3>
+      <ul>
+        <li><b>強拍（小節の頭、3拍目）にはコードの構成音</b>（鍵盤の赤）を置くと安定します。間の音は自由に動いて大丈夫です。</li>
+        <li><b>ぶつかりやすい音</b>（鍵盤のオレンジ）は、長く伸ばさず通り過ぎるように使います。</li>
+        <li><b>隣の音へ動く（順次進行）を基本に、ときどき跳ぶ</b>。大きく跳んだら、反対方向へ順番に戻ると自然です。</li>
+        <li><b>最高音はフレーズの中で1回</b>。そこが山になります。</li>
+        <li>終わりを<b>主音</b>（C メジャーなら ド）にすると「終わった」感じ、<b>3度や5度</b>（ミ、ソ）にすると「続く」感じになります。</li>
+        <li>迷ったら<b>ヨナ抜き音階</b>（ド・レ・ミ・ソ・ラ）だけで作ると、どのコードの上でもほぼ濁らず、J-POPらしく歌いやすくなります。</li>
+      </ul>
+      <h3>J-POPのセクションの定石</h3>
+      <table>
+        <tr><th>セクション</th><th>音域</th><th>リズム</th><th>狙い</th></tr>
+        <tr><td>Aメロ</td><td>低め、狭い</td><td>語るように細かく</td><td>状況説明、抑える</td></tr>
+        <tr><td>Bメロ</td><td>だんだん上がる</td><td>長い音が増える</td><td>サビへの期待を高める</td></tr>
+        <tr><td>サビ</td><td>曲の最高音を含む</td><td>長い音、覚えやすい反復</td><td>一番言いたいこと</td></tr>
+      </table>
+      <div class="tip"><strong>コツ：</strong>サビの最高音はAメロ・Bメロで使わずに取っておくと、サビの開放感が強くなります。サビの伸ばす音に 9th（C のコードの上のレ）を置くと、浮遊感が出ます。</div>
+    </section>
+
+    <section id="faq">
+      <h2>12. 困ったとき</h2>
+      <h3>音が出ない</h3>
+      <p>ブラウザの仕様で、ページを開いてから一度クリックやキー操作をするまで音が出ません。何かの候補をクリックしてみてください。それでも出ないときは、パソコンの音量とブラウザのタブのミュートを確認してください。</p>
+      <h3>Safari で、再生中なのに何も聞こえない</h3>
+      <p>Safari では、スピーカーやイヤホンの切り替えなどをきっかけに、Web ページの音声が「再生中」のまま無音になることがあります（他のアプリの音は出る、タブにスピーカーのアイコンも出る、という状態）。ページを再読み込みしても直りません。<b>Safari を完全に終了（<kbd>Cmd</kbd>+<kbd>Q</kbd>）してから開き直してください。</b>急ぐときは Chrome で開けば鳴ります。</p>
+      <h3>ピアノやギターではなく、電子音のような音がする</h3>
+      <p>音源をインターネットから読み込めていません（右上に「シンセ」と表示されます）。ネット接続を確認して、ページを再読み込みしてください。</p>
+      <h3>録音ボタンを押しても録音できない</h3>
+      <p>そのセクションにコードが1つもないと録音できません。先にコードを置いてください。</p>
+      <h3>数字キーやスペースが効かない</h3>
+      <p>曲名やテンポの入力欄にカーソルがあると、ショートカットは効きません。画面の何もないところをクリックしてから押してください。</p>
+      <h3>テンポや設定が変になっている</h3>
+      <p>設定は曲と一緒に保存されるので、前回の状態が残っています。上の設定欄で直すか、<span class="ui">新規</span> で最初からやり直してください。</p>
+      <h3>別のブラウザやパソコンで開いたら曲がない</h3>
+      <p>自動保存は、今使っているブラウザの中だけに保存されます。別の環境で使うときは <span class="ui">ファイルに保存</span> した <code>.json</code> を <span class="ui">ファイルを開く</span> で読み込んでください。</p>
+      <h3>「ファイルを開く」を押しても何も起きない</h3>
+      <p>自動操作用のブラウザ（テストツールが開いたウィンドウ）では、ファイル選択の画面が出ません。普段使っているブラウザで <code>index.html</code> を開いてください。</p>
+      <h3>間違えて消してしまった</h3>
+      <p><kbd>Cmd</kbd>+<kbd>Z</kbd>（Windows は <kbd>Ctrl</kbd>+<kbd>Z</kbd>）で元に戻せます。ページを開き直すと、それより前には戻れません。</p>
+      <h3>ギターのフォームが見慣れない形になっている</h3>
+      <p>押さえ方は自動で探しているため、コードによっては定番とは違う（押さえられはする）形になることがあります。</p>
+    </section>
+  </article>
+</div>
+</body>
+</html>
