@@ -93,7 +93,7 @@
         <li>右側の「最初のコード」の候補から1つクリックします（例：C）。音が鳴り、中央のコードトラックに追加されます。</li>
         <li>すぐに「C の次の候補」が出るので、気になるものの <span class="ui">▶</span> で試聴して、気に入ったらクリックします。これを4〜8回くり返します。</li>
         <li><kbd>Space</kbd> を押すと、作った進行がループ再生されます。</li>
-        <li>再生しながら画面下の鍵盤（赤い音が中心）を弾いて、メロディを探します。いいフレーズが浮かんだら <kbd>R</kbd> で録音するか、ピアノロールをクリックして音を置きます。</li>
+        <li>再生しながら画面下の鍵盤（赤い音が中心）を弾いて、メロディを探します。いいフレーズが浮かんだら <kbd>Shift</kbd>+<kbd>R</kbd> で録音するか、ピアノロールをクリックして音を置きます。</li>
         <li>できたら <span class="ui">ファイル ▾</span> → <span class="ui">MIDI書き出し</span> で、DAWに持っていきます。</li>
       </ol>
       <div class="tip"><strong>コツ：</strong>迷ったら <span class="ui">定番から始める</span> で「王道進行」などを読み込み、1つずつ差し替えていくと早いです。</div>
@@ -118,7 +118,7 @@
       <h3>候補の読み方</h3>
       <table>
         <tr><th>表示</th><th>意味</th></tr>
-        <tr><td>左の数字</td><td>キーボードの <kbd>1</kbd>〜<kbd>9</kbd> で選べる番号</td></tr>
+        <tr><td>左の数字</td><td><kbd>Option</kbd>+<kbd>1</kbd>〜<kbd>9</kbd>（Windows は <kbd>Alt</kbd>）で選べる番号</td></tr>
         <tr><td>大きな文字</td><td>コード名（例：Am）</td></tr>
         <tr><td>小さな文字</td><td>度数（キーの中で何番目のコードか。例：Ⅵm）。キーを変えても進行の形が分かります</td></tr>
         <tr><td>黒いラベル</td><td>コードの役割。<span class="fn">T</span> 安定、<span class="fn">SD</span> 広がり、<span class="fn">D</span> 緊張（Ⅰに帰りたい）、<span class="fn">→Ⅵm</span> などは「そこへ向かうための一時的な緊張」</td></tr>
@@ -128,7 +128,7 @@
       </table>
       <h3>候補を選ぶ方法</h3>
       <ul>
-        <li><b>クリック</b>または <kbd>1</kbd>〜<kbd>9</kbd>：進行に追加します</li>
+        <li><b>クリック</b>または <kbd>Option</kbd>+<kbd>1</kbd>〜<kbd>9</kbd>：進行に追加します</li>
         <li><span class="ui">▶</span>：追加せずに試聴だけします</li>
         <li><span class="ui">おまかせで1つ</span>／<span class="ui">おまかせで4つ</span>：％の確率に従ってランダムに選びます。アイデアに詰まったときに</li>
         <li><span class="ui">定番から始める</span>：王道進行・小室進行・カノン進行などをまるごと読み込みます（今のセクションの進行は置き換わります）</li>
@@ -207,9 +207,9 @@
       <h3>弾いて録音する</h3>
       <ol class="steps">
         <li>メロディを付けたいセクションのコード進行を作っておきます（コードがないと録音できません）。</li>
-        <li><kbd>R</kbd>（または <span class="ui">● 録音</span>）を押すと、ループ再生と録音が始まります。</li>
-        <li>キーボードで弾きます。<kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> <kbd>F</kbd> <kbd>G</kbd> <kbd>H</kbd> <kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd> <kbd>;</kbd> が白鍵（ド〜ミ）、<kbd>W</kbd> <kbd>E</kbd> <kbd>T</kbd> <kbd>Y</kbd> <kbd>U</kbd> <kbd>O</kbd> <kbd>P</kbd> が黒鍵、<kbd>Z</kbd>／<kbd>X</kbd> でオクターブを移動します。</li>
-        <li>もう一度 <kbd>R</kbd> で録音を止めます（再生は続きます）。記録した音はピアノロールに表示され、次の周からコードと一緒に鳴ります。</li>
+        <li><kbd>Shift</kbd>+<kbd>R</kbd>（または <span class="ui">● 録音</span>）を押すと、ループ再生と録音が始まります。</li>
+        <li>MIDIキーボード、または PCのキーボードで弾きます（下の「弾き方」を参照）。</li>
+        <li>もう一度 <kbd>Shift</kbd>+<kbd>R</kbd> で録音を止めます（再生は続きます）。記録した音はピアノロールに表示され、次の周からコードと一緒に鳴ります。</li>
       </ol>
       <ul>
         <li>弾いたタイミングは16分音符単位にそろえられます。</li>
@@ -280,7 +280,23 @@
         <tr><td><span class="sw" style="background:var(--avoid)"></span> オレンジ</td><td>ぶつかりやすい音（構成音の半音上）</td><td>伸ばすと濁りやすい音です。通り過ぎるだけなら使えます</td></tr>
         <tr><td>色なし</td><td>キーの音階の外の音</td><td>意図がないと浮きやすい音です</td></tr>
       </table>
-      <p>鍵盤は <b>C3〜C7 の4オクターブ</b>です。クリックでも鳴らせます。鍵盤に書いてあるアルファベットが対応するPCのキーで、<b>PCのキーボードで弾ける範囲（17音）は鍵盤の上端が赤い帯</b>になっています。<kbd>Z</kbd>／<kbd>X</kbd> でこの範囲を1オクターブずつ上下に動かせます（始まりは C3〜C6）。</p>
+      <p>鍵盤は <b>C3〜C7 の4オクターブ</b>です。クリックでも鳴らせます。</p>
+      <h3>弾き方1：MIDIキーボード（おすすめ）</h3>
+      <p>USB や Bluetooth でつないだ MIDIキーボードで弾けます。<b>Chrome（または Edge・Firefox）で開いてください。Safari では使えません。</b></p>
+      <ol class="steps">
+        <li>MIDIキーボードをパソコンにつなぎます。</li>
+        <li>下の鍵盤の見出しの <span class="ui">🎹 MIDIキーボード</span> を押し、Chrome の「MIDI デバイスの使用」を許可します。</li>
+        <li>ボタンが機器の名前（赤字）に変われば接続完了です。弾いた音が Kotone の音源で鳴り、録音中はメロディとして記録されます。弾く強さも音量に反映されます。</li>
+      </ol>
+      <p>一度許可すれば、次回からは自動でつながります（ページを開いた直後は、画面をどこか1回クリックすると音が出るようになります）。</p>
+      <h3>弾き方2：PCのキーボード</h3>
+      <p>PCのキーボードの2つの段を鍵盤として使います。切り替えなしで約2オクターブ半を弾けます。</p>
+      <table>
+        <tr><th>段</th><th>白鍵</th><th>黒鍵</th><th>音域（初期）</th></tr>
+        <tr><td>下の段</td><td><kbd>Z</kbd> <kbd>X</kbd> <kbd>C</kbd> <kbd>V</kbd> <kbd>B</kbd> <kbd>N</kbd> <kbd>M</kbd>（続けて <kbd>,</kbd> <kbd>.</kbd> <kbd>/</kbd>）</td><td><kbd>S</kbd> <kbd>D</kbd> <kbd>G</kbd> <kbd>H</kbd> <kbd>J</kbd>（<kbd>L</kbd> <kbd>;</kbd>）</td><td>C4〜E5</td></tr>
+        <tr><td>上の段</td><td><kbd>Q</kbd> <kbd>W</kbd> <kbd>E</kbd> <kbd>R</kbd> <kbd>T</kbd> <kbd>Y</kbd> <kbd>U</kbd>（続けて <kbd>I</kbd> <kbd>O</kbd> <kbd>P</kbd>）</td><td><kbd>2</kbd> <kbd>3</kbd> <kbd>5</kbd> <kbd>6</kbd> <kbd>7</kbd>（<kbd>9</kbd> <kbd>0</kbd>）</td><td>C5〜E6</td></tr>
+      </table>
+      <p><b>P の右隣の2つのキー</b>（US配列では <kbd>[</kbd> <kbd>]</kbd>、日本語配列では <kbd>@</kbd> <kbd>[</kbd>）で、全体を1オクターブずつ上下に動かせます（下の段の始まりは C3〜C5）。PCのキーボードで弾ける範囲は、鍵盤の上端が赤い帯になり、キーの文字も表示されます。キーの位置で判定するので、日本語配列でも同じ位置で弾けます。</p>
     </section>
 
     <section id="export">
@@ -304,15 +320,15 @@
         <tr><th>キー</th><th>動作</th></tr>
         <tr><td><kbd>Space</kbd></td><td>今のセクションを再生／停止</td></tr>
         <tr><td><kbd>Shift</kbd>+<kbd>Space</kbd></td><td>曲全体を再生／停止</td></tr>
-        <tr><td><kbd>1</kbd>〜<kbd>9</kbd></td><td>候補を選ぶ（追加、または選択中のコードを差し替え）</td></tr>
+        <tr><td><kbd>Option</kbd>+<kbd>1</kbd>〜<kbd>9</kbd></td><td>候補を選ぶ（追加、または選択中のコードを差し替え。Windows は <kbd>Alt</kbd>）</td></tr>
         <tr><td><kbd>Cmd</kbd>+<kbd>Z</kbd>／<kbd>Shift</kbd>+<kbd>Cmd</kbd>+<kbd>Z</kbd></td><td>元に戻す／やり直す（Windows は <kbd>Ctrl</kbd>）</td></tr>
         <tr><td><kbd>Backspace</kbd></td><td>選んでいる音やコードを消す（何も選んでいなければ最後のコード）</td></tr>
         <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>コードを選択（音を選んでいるときは音を前後に移動）</td></tr>
         <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>選んでいる音を半音上下（<kbd>Shift</kbd> でオクターブ）</td></tr>
         <tr><td><kbd>Esc</kbd></td><td>選択を解除</td></tr>
-        <tr><td><kbd>R</kbd></td><td>録音の開始／終了</td></tr>
-        <tr><td><kbd>A</kbd>〜<kbd>;</kbd>、<kbd>W</kbd> <kbd>E</kbd> <kbd>T</kbd> <kbd>Y</kbd> <kbd>U</kbd> <kbd>O</kbd> <kbd>P</kbd></td><td>鍵盤を弾く</td></tr>
-        <tr><td><kbd>Z</kbd> <kbd>X</kbd></td><td>鍵盤のオクターブを下げる／上げる</td></tr>
+        <tr><td><kbd>Shift</kbd>+<kbd>R</kbd></td><td>録音の開始／終了</td></tr>
+        <tr><td>下の段 <kbd>Z</kbd>〜<kbd>/</kbd>、上の段 <kbd>Q</kbd>〜<kbd>P</kbd>（黒鍵は <kbd>S</kbd> <kbd>D</kbd> <kbd>G</kbd> <kbd>H</kbd> <kbd>J</kbd>・<kbd>2</kbd> <kbd>3</kbd> <kbd>5</kbd> <kbd>6</kbd> <kbd>7</kbd> など）</td><td>鍵盤を弾く</td></tr>
+        <tr><td>P の右隣の2つのキー（<kbd>[</kbd> <kbd>]</kbd>／日本語配列は <kbd>@</kbd> <kbd>[</kbd>）</td><td>鍵盤のオクターブを下げる／上げる</td></tr>
       </table>
       <p class="note">曲名やテンポの入力欄に文字を入力している間は、ショートカットは効きません。</p>
     </section>
@@ -372,7 +388,9 @@
       <p>音源をインターネットから読み込めていません（右上に「シンセ」と表示されます）。ネット接続を確認して、ページを再読み込みしてください。</p>
       <h3>録音ボタンを押しても録音できない</h3>
       <p>そのセクションにコードが1つもないと録音できません。先にコードを置いてください。</p>
-      <h3>数字キーやスペースが効かない</h3>
+      <h3>MIDIキーボードを押しても音が出ない</h3>
+      <p>Safari では MIDIキーボードは使えません。Chrome で開いてください。Chrome でも鳴らないときは、ボタンに機器の名前が出ているか（「機器なし」なら USB をつなぎ直す）、ページを開いた後に画面を1回クリックしたか（ブラウザの仕様で、クリックするまで音が出ません）を確認してください。</p>
+      <h3>ショートカットやスペースが効かない</h3>
       <p>曲名やテンポの入力欄にカーソルがあると、ショートカットは効きません。画面の何もないところをクリックしてから押してください。</p>
       <h3>テンポや設定が変になっている</h3>
       <p>設定は曲と一緒に保存されるので、前回の状態が残っています。上の設定欄で直すか、<span class="ui">新規</span> で最初からやり直してください。</p>

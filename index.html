@@ -178,6 +178,7 @@
 
   .dock { background: var(--panel); border-top: 1px solid var(--border); padding: 6px 16px 8px; }
   .dock.closed .keys-wrap, .dock.closed .legend, .dock.closed .dock-hint { display: none; }
+  #midiBtn.midi-on { border-color: var(--accent); color: var(--accent); font-weight: 600; }
   .piano { position: relative; display: flex; height: 92px; margin-top: 5px; user-select: none; touch-action: none; }
   .wk { flex: 1; background: var(--k-white); border: 1px solid #9a9a9a; border-radius: 0 0 6px 6px; margin-right: -1px;
     position: relative; display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
@@ -247,7 +248,7 @@
     <span class="sep"></span>
     <button id="playSec" class="primary">▶ 再生</button>
     <button id="playSong">▶ 曲全体</button>
-    <button id="rec">● 録音</button>
+    <button id="rec" title="録音（Shift+R）">● 録音</button>
     <div class="spacer"></div>
     <span id="status" class="status"></span>
   </header>
@@ -350,7 +351,8 @@
         <span><i style="background:var(--k-avoid)"></i>ぶつかりやすい音</span>
       </div>
       <div class="spacer"></div>
-      <span class="small dock-hint">A〜; 白鍵 ／ W E T Y U O P 黒鍵 ／ Z X オクターブ</span>
+      <span class="small dock-hint" id="keyHint"></span>
+      <button id="midiBtn" title="USB や Bluetooth でつないだ MIDIキーボードで弾く（Chrome）">🎹 MIDIキーボード</button>
       <button id="dockToggle">隠す ▾</button>
     </div>
     <div class="keys-wrap">
@@ -1098,7 +1100,24 @@ function updateButtons() {
 }
 
 // ================= 録音と手弾き =================
-const KEYMAP = { a: 0, w: 1, s: 2, e: 3, d: 4, f: 5, t: 6, g: 7, y: 8, h: 9, u: 10, j: 11, k: 12, o: 13, l: 14, p: 15, ';': 16 };
+// PCのキーボードを2段の鍵盤として使う（FL Studio などと同じ方式）。下の段が ui.oct から、上の段がその1オクターブ上から。
+// 物理的なキーの位置（e.code）で判定するので、JIS配列でも同じ位置で弾ける
+const KEYMAP = {
+  KeyZ: 0, KeyS: 1, KeyX: 2, KeyD: 3, KeyC: 4, KeyV: 5, KeyG: 6, KeyB: 7, KeyH: 8, KeyN: 9, KeyJ: 10, KeyM: 11,
+  Comma: 12, KeyL: 13, Period: 14, Semicolon: 15, Slash: 16,
+  KeyQ: 12, Digit2: 13, KeyW: 14, Digit3: 15, KeyE: 16, KeyR: 17, Digit5: 18, KeyT: 19, Digit6: 20, KeyY: 21, Digit7: 22, KeyU: 23,
+  KeyI: 24, Digit9: 25, KeyO: 26, Digit0: 27, KeyP: 28,
+};
+// キーの刻印（Chrome ではキーボード配列に合わせて取得し、取れなければUS配列の表記）
+const keyLabels = {};
+const US_LABEL = { Comma: ',', Period: '.', Semicolon: ';', Slash: '/', BracketLeft: '[', BracketRight: ']' };
+const keyLabel = code => keyLabels[code] || US_LABEL[code] || code.replace(/^Key|^Digit/, '');
+if (navigator.keyboard?.getLayoutMap) {
+  navigator.keyboard.getLayoutMap().then(map => {
+    map.forEach((v, k) => { keyLabels[k] = v.toUpperCase(); });
+    renderPiano();
+  }).catch(() => {});
+}
 const held = {};
 
 function recordPos() {
@@ -1111,10 +1130,10 @@ function recordPos() {
   return q;
 }
 
-function noteOn(k, m) {
+function noteOn(k, m, vel = 0.6) {
   if (held[k]) return;
   audio();
-  held[k] = { m, rel: note(master, m, ctx.currentTime, 8, 0.6), start: ctx.currentTime, recT: recordPos() };
+  held[k] = { m, rel: note(master, m, ctx.currentTime, 8, vel), start: ctx.currentTime, recT: recordPos() };
   renderPiano();
 }
 
@@ -1131,6 +1150,42 @@ function noteOff(k) {
     renderMelInfo();
   }
   renderPiano();
+}
+
+let midiAccess = null;
+async function enableMidi(byUser) {
+  if (!navigator.requestMIDIAccess) {
+    if (byUser) alert('このブラウザは MIDIキーボードに対応していません。Chrome で開いてください。');
+    return;
+  }
+  try {
+    midiAccess = await navigator.requestMIDIAccess();
+  } catch (e) {
+    if (byUser) alert('MIDIキーボードの使用が許可されませんでした。アドレスバーの左のアイコンから「MIDI デバイス」を許可してください。');
+    return;
+  }
+  try { localStorage.setItem('chord-maker-midi', '1'); } catch (e) { /* 次回の自動接続を覚えられないだけ */ }
+  const bind = () => {
+    for (const input of midiAccess.inputs.values()) input.onmidimessage = onMidi;
+    renderMidiStatus();
+  };
+  midiAccess.onstatechange = bind;
+  bind();
+}
+// ノートオン／オフだけを扱う（強さ＝ベロシティは音量に反映）
+function onMidi(e) {
+  const [st, d1, d2] = e.data;
+  const cmd = st & 0xf0;
+  if (cmd === 0x90 && d2 > 0) noteOn('midi' + d1, d1, 0.25 + 0.6 * d2 / 127);
+  else if (cmd === 0x80 || cmd === 0x90) noteOff('midi' + d1);
+}
+function renderMidiStatus() {
+  const b = $('#midiBtn');
+  if (!midiAccess) { b.textContent = '🎹 MIDIキーボード'; b.classList.remove('midi-on'); return; }
+  const names = [...midiAccess.inputs.values()].filter(i => i.state === 'connected').map(i => i.name);
+  b.textContent = names.length ? `🎹 ${names[0]}${names.length > 1 ? ` ほか${names.length - 1}台` : ''}` : '🎹 MIDI：機器なし';
+  b.classList.toggle('midi-on', names.length > 0);
+  b.title = names.length ? `接続中：${names.join('、')}` : 'MIDIキーボードを USB でつないでください';
 }
 
 function toggleRec() {
@@ -1472,7 +1527,7 @@ function renderRoll() {
   $('.gut-keys').scrollTop = box.scrollTop;
   if (!total) {
     c2.fillStyle = col('--muted'); c2.font = '12px system-ui, sans-serif';
-    c2.fillText('コードを置くと、ここでメロディを編集できます（クリックで音を追加、R で録音）', 12, box.scrollTop + 24);
+    c2.fillText('コードを置くと、ここでメロディを編集できます（クリックで音を追加、Shift+R で録音）', 12, box.scrollTop + 24);
     return;
   }
   const key = secKey(sec);
@@ -1778,7 +1833,11 @@ function renderPiano() {
   const avoid = new Set([...scale].filter(p => !tones.has(p) && tones.has((p + 11) % 12)));
   const down = new Set(Object.values(held).map(h => h.m));
   const keyChar = {};
-  for (const [k, v] of Object.entries(KEYMAP)) keyChar[ui.oct + v] = k.toUpperCase();
+  for (const [code, v] of Object.entries(KEYMAP)) {
+    const m = ui.oct + v;
+    keyChar[m] = keyChar[m] ? keyChar[m] + ' ' + keyLabel(code) : keyLabel(code);
+  }
+  $('#keyHint').textContent = `下の段 ${keyLabel('KeyZ')}〜${keyLabel('KeyM')}・上の段 ${keyLabel('KeyQ')}〜${keyLabel('KeyU')} ／ ${keyLabel('BracketLeft')} ${keyLabel('BracketRight')} オクターブ ／ Shift+R 録音`;
   $('#pianoTitle').textContent = `鍵盤（${info ? info.name + ' ／ ' : ''}${key.name}）`;
   renderDiagram(info);
 
@@ -2387,15 +2446,17 @@ window.addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   if ((e.metaKey || e.ctrlKey) && k === 'z') { e.preventDefault(); restore(e.shiftKey ? 1 : -1); return; }
   if ((e.metaKey || e.ctrlKey) && k === 'y') { e.preventDefault(); restore(1); return; }
+  // 候補を選ぶのは Option(Alt)+1〜9（数字キーは上の段の黒鍵に使うため）
+  if (e.altKey && !e.metaKey && !e.ctrlKey && /^Digit[1-9]$/.test(e.code)) {
+    e.preventDefault();
+    const c = candidates(candContext())[+e.code.slice(5) - 1];
+    if (c) choose(c.id);
+    return;
+  }
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   const sec = curSec();
   const n = sec.melody[ui.note];
   if (e.code === 'Space') { e.preventDefault(); play(e.shiftKey ? 'song' : 'section'); return; }
-  if (/^[1-9]$/.test(e.key)) {
-    const c = candidates(candContext())[+e.key - 1];
-    if (c) choose(c.id);
-    return;
-  }
   if (k === 'backspace' || k === 'delete') {
     e.preventDefault();
     if (n) removeNote(ui.note);
@@ -2429,13 +2490,14 @@ window.addEventListener('keydown', e => {
     return;
   }
   if (k === 'escape') { ui.sel = -1; ui.note = -1; closeMenu(); render(); return; }
-  if (k === 'r') { toggleRec(); return; }
+  if (e.code === 'KeyR' && e.shiftKey) { toggleRec(); return; }
   if (k === '-' && n) { toggleTie(ui.note); return; }
-  if (k === 'z') { ui.oct = Math.max(KEYS_LO, ui.oct - 12); renderPiano(); return; }
-  if (k === 'x') { ui.oct = Math.min(KEYS_HI - 12, ui.oct + 12); renderPiano(); return; } // 弾ける範囲の始まりは C3〜C6
-  if (k in KEYMAP) { e.preventDefault(); if (!e.repeat) noteOn(k, ui.oct + KEYMAP[k]); }
+  // オクターブは [ ] （P の右隣の2つのキー）。下の段の始まりを C3〜C5 の間で動かす
+  if (e.code === 'BracketLeft') { e.preventDefault(); ui.oct = Math.max(KEYS_LO, ui.oct - 12); renderPiano(); return; }
+  if (e.code === 'BracketRight') { e.preventDefault(); ui.oct = Math.min(KEYS_HI - 24, ui.oct + 12); renderPiano(); return; }
+  if (e.code in KEYMAP && !e.shiftKey) { e.preventDefault(); if (!e.repeat) noteOn(e.code, ui.oct + KEYMAP[e.code]); }
 });
-window.addEventListener('keyup', e => noteOff(e.key.toLowerCase()));
+window.addEventListener('keyup', e => noteOff(e.code));
 window.addEventListener('blur', () => Object.keys(held).forEach(noteOff));
 
 // 鍵盤の開閉（見た目の好みなので、この端末のブラウザにだけ覚えておく）
@@ -2444,6 +2506,8 @@ function setDock(open) {
   $('#dockToggle').textContent = open ? '隠す ▾' : '鍵盤を表示 ▴';
   try { localStorage.setItem('chord-maker-dock', open ? '1' : '0'); } catch (e) { /* 保存できなくても動作は続ける */ }
 }
+$('#midiBtn').onclick = () => { audio(); enableMidi(true); };
+try { if (localStorage.getItem('chord-maker-midi') === '1') enableMidi(false); } catch (e) { /* 自動接続しないだけ */ }
 $('#dockToggle').onclick = () => setDock($('#dock').classList.contains('closed'));
 let dockOpen = true;
 try { dockOpen = localStorage.getItem('chord-maker-dock') !== '0'; } catch (e) { /* 既定は表示 */ }
