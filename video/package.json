@@ -1,0 +1,9 @@
+{
+  "name": "kotone-video",
+  "private": true,
+  "type": "module",
+  "description": "Kotone の紹介動画を、Chrome を自動操作して録画・合成するスクリプト",
+  "dependencies": {
+    "playwright-core": "^1.63.0"
+  }
+}

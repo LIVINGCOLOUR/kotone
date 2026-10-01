@@ -2,3 +2,5 @@
 .playwright-mcp/
 .wrangler/
 dist/
+video/node_modules/
+video/out/
