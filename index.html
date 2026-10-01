@@ -191,7 +191,11 @@
   .wk.tone, .bk.tone { background: #d9485f; color: #fff; }
   .wk.down, .bk.down { filter: brightness(.75); }
   .wk .pc { font-weight: 700; }
-  .wk.pcmap, .bk.pcmap { box-shadow: inset 0 4px 0 #d9485f; }
+  .wk.pcmap, .bk.pcmap { box-shadow: inset 0 4px 0 #3b82f6; }
+  /* 「音階だけ」「ヨナ抜き」で弾けない鍵盤は灰色に（半透明だと背景が透けて紛らわしいため塗る） */
+  .wk.off { background: #c8c8cc !important; color: #8a8a8f !important; }
+  .bk.off { background: #6a6c72 !important; }
+  #keyMode { font-size: 12px; padding: 3px 4px; }
   .keys-wrap { display: flex; gap: 14px; align-items: flex-start; }
   .keys-wrap .piano { flex: 1; min-width: 0; }
   .gdiag { flex: none; text-align: center; font-size: 11px; color: var(--muted); }
@@ -349,9 +353,17 @@
         <span><i style="background:#d9485f"></i>構成音</span>
         <span><i style="background:var(--k-ok)"></i>使いやすい音</span>
         <span><i style="background:var(--k-avoid)"></i>ぶつかりやすい音</span>
+        <span><i style="background:#3b82f6"></i>PCで弾ける範囲</span>
       </div>
       <div class="spacer"></div>
       <span class="small dock-hint" id="keyHint"></span>
+      <label title="PCのキーボード・MIDIキーボードで鳴らす音。「音階だけ」「ヨナ抜き」ではキーから外れた音が出ません">鍵盤
+        <select id="keyMode">
+          <option value="all">全部の音</option>
+          <option value="scale">音階だけ</option>
+          <option value="yona">ヨナ抜き</option>
+        </select>
+      </label>
       <button id="midiBtn" title="USB や Bluetooth でつないだ MIDIキーボードで弾く（Chrome）">🎹 MIDIキーボード</button>
       <button id="dockToggle">隠す ▾</button>
     </div>
@@ -667,7 +679,7 @@ song = migrate(song && Array.isArray(song.sections) && song.sections.length ? { 
 
 // sel: 選んでいるコード、note: 選んでいるメロディの音、snap/noteLen: ピアノロールの刻みと、次に置く音の長さ（拍）
 // verse: 今見ている番（0=1番）
-const ui = { sel: -1, note: -1, verse: 0, snap: 0.25, noteLen: 1, oct: 60, recording: false, playing: null, playhead: null };
+const ui = { sel: -1, note: -1, verse: 0, keyMode: 'scale', snap: 0.25, noteLen: 1, oct: 60, recording: false, playing: null, playhead: null };
 
 const secById = id => song.sections.find(s => s.id === id);
 const curSec = () => secById(song.current) || song.sections[0];
@@ -1176,7 +1188,7 @@ async function enableMidi(byUser) {
 function onMidi(e) {
   const [st, d1, d2] = e.data;
   const cmd = st & 0xf0;
-  if (cmd === 0x90 && d2 > 0) noteOn('midi' + d1, d1, 0.25 + 0.6 * d2 / 127);
+  if (cmd === 0x90 && d2 > 0) noteOn('midi' + d1, snapToScale(d1), 0.25 + 0.6 * d2 / 127);
   else if (cmd === 0x80 || cmd === 0x90) noteOff('midi' + d1);
 }
 function renderMidiStatus() {
@@ -1825,6 +1837,39 @@ function focusInfo() {
 }
 
 const KEYS_LO = 48, KEYS_HI = 96; // 下の鍵盤の音域（C3〜C7）
+
+// ---- 外れない鍵盤モード：「音階だけ」「ヨナ抜き」では、PCのキーボードの2段をキーの音階の音だけに並べ直す ----
+// 下の段（Z〜/ の10キー）が主音から、上の段（Q〜P の10キー）がその1オクターブ上から、音階を順に上がっていく
+const ROW_LOW = ['KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyB', 'KeyN', 'KeyM', 'Comma', 'Period', 'Slash'];
+const ROW_HIGH = ['KeyQ', 'KeyW', 'KeyE', 'KeyR', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyO', 'KeyP'];
+function scaleSteps() {
+  const minor = secKey(curSec()).mode === 'minor';
+  if (ui.keyMode === 'yona') return minor ? [0, 2, 3, 7, 8] : [0, 2, 4, 7, 9]; // ヨナ抜き長音階／短音階
+  return minor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11];
+}
+const tonicPc = () => { const k = secKey(curSec()); return (k.pc + k.tonicOff) % 12; };
+// 下の段の最初の音：ui.oct（C）にいちばん近い主音
+const scaleBase = () => ui.oct + ((tonicPc() + 6) % 12 - 6);
+function degreeToMidi(d) {
+  const st = scaleSteps(), n = st.length;
+  return scaleBase() + 12 * Math.floor(d / n) + st[((d % n) + n) % n];
+}
+// PCのキー → 鳴らす音（割り当てがなければ null）
+function keyToMidi(code) {
+  if (ui.keyMode === 'all') return code in KEYMAP ? ui.oct + KEYMAP[code] : null;
+  let i = ROW_LOW.indexOf(code);
+  if (i >= 0) return degreeToMidi(i);
+  i = ROW_HIGH.indexOf(code);
+  return i >= 0 ? degreeToMidi(i + scaleSteps().length) : null;
+}
+const mappedCodes = () => ui.keyMode === 'all' ? Object.keys(KEYMAP) : [...ROW_LOW, ...ROW_HIGH];
+// MIDIキーボードで押した音を、いちばん近い音階の音に寄せる（同じ距離なら上へ）
+function snapToScale(m) {
+  if (ui.keyMode === 'all') return m;
+  const st = scaleSteps(), t = tonicPc();
+  for (let d = 0; d < 6; d++) for (const x of [m + d, m - d]) if (st.includes(((x - t) % 12 + 12) % 12)) return x;
+  return m;
+}
 function renderPiano() {
   const sec = curSec(), key = secKey(sec);
   const info = focusInfo();
@@ -1833,11 +1878,17 @@ function renderPiano() {
   const avoid = new Set([...scale].filter(p => !tones.has(p) && tones.has((p + 11) % 12)));
   const down = new Set(Object.values(held).map(h => h.m));
   const keyChar = {};
-  for (const [code, v] of Object.entries(KEYMAP)) {
-    const m = ui.oct + v;
+  for (const code of mappedCodes()) {
+    const m = keyToMidi(code);
     keyChar[m] = keyChar[m] ? keyChar[m] + ' ' + keyLabel(code) : keyLabel(code);
   }
-  $('#keyHint').textContent = `下の段 ${keyLabel('KeyZ')}〜${keyLabel('KeyM')}・上の段 ${keyLabel('KeyQ')}〜${keyLabel('KeyU')} ／ ${keyLabel('BracketLeft')} ${keyLabel('BracketRight')} オクターブ ／ Shift+R 録音`;
+  const rows = ui.keyMode === 'all'
+    ? `${keyLabel('KeyZ')}〜${keyLabel('KeyM')}・${keyLabel('KeyQ')}〜${keyLabel('KeyU')}`
+    : `${keyLabel('KeyZ')}〜${keyLabel('Slash')}・${keyLabel('KeyQ')}〜${keyLabel('KeyP')}`;
+  $('#keyHint').textContent = `${rows} 演奏 ／ ${keyLabel('BracketLeft')}${keyLabel('BracketRight')} オクターブ ／ Shift+R 録音`;
+  $('#keyMode').value = ui.keyMode;
+  // 「音階だけ」「ヨナ抜き」では、弾けない音の鍵盤を薄くする
+  const playable = ui.keyMode === 'all' ? null : new Set(scaleSteps().map(x => (tonicPc() + x) % 12));
   $('#pianoTitle').textContent = `鍵盤（${info ? info.name + ' ／ ' : ''}${key.name}）`;
   renderDiagram(info);
 
@@ -1849,7 +1900,7 @@ function renderPiano() {
   const cls = m => {
     const pc = m % 12;
     return (tones.has(pc) ? ' tone' : avoid.has(pc) ? ' avoid' : scale.has(pc) ? ' ok' : '') + (down.has(m) ? ' down' : '')
-      + (keyChar[m] ? ' pcmap' : '');
+      + (keyChar[m] ? ' pcmap' : '') + (playable && !playable.has(pc) ? ' off' : '');
   };
   const bind = (el, m) => {
     el.onpointerdown = e => { e.preventDefault(); noteOn('p' + m, m); };
@@ -2495,7 +2546,8 @@ window.addEventListener('keydown', e => {
   // オクターブは [ ] （P の右隣の2つのキー）。下の段の始まりを C3〜C5 の間で動かす
   if (e.code === 'BracketLeft') { e.preventDefault(); ui.oct = Math.max(KEYS_LO, ui.oct - 12); renderPiano(); return; }
   if (e.code === 'BracketRight') { e.preventDefault(); ui.oct = Math.min(KEYS_HI - 24, ui.oct + 12); renderPiano(); return; }
-  if (e.code in KEYMAP && !e.shiftKey) { e.preventDefault(); if (!e.repeat) noteOn(e.code, ui.oct + KEYMAP[e.code]); }
+  const km = e.shiftKey ? null : keyToMidi(e.code);
+  if (km !== null) { e.preventDefault(); if (!e.repeat) noteOn(e.code, km); }
 });
 window.addEventListener('keyup', e => noteOff(e.code));
 window.addEventListener('blur', () => Object.keys(held).forEach(noteOff));
@@ -2506,6 +2558,13 @@ function setDock(open) {
   $('#dockToggle').textContent = open ? '隠す ▾' : '鍵盤を表示 ▴';
   try { localStorage.setItem('chord-maker-dock', open ? '1' : '0'); } catch (e) { /* 保存できなくても動作は続ける */ }
 }
+try { const km = localStorage.getItem('chord-maker-keymode'); if (['all', 'scale', 'yona'].includes(km)) ui.keyMode = km; } catch (e) { /* 既定は「音階だけ」 */ }
+$('#keyMode').onchange = e => {
+  ui.keyMode = e.target.value;
+  try { localStorage.setItem('chord-maker-keymode', ui.keyMode); } catch (err) { /* 覚えられないだけ */ }
+  e.target.blur();
+  renderPiano();
+};
 $('#midiBtn').onclick = () => { audio(); enableMidi(true); };
 try { if (localStorage.getItem('chord-maker-midi') === '1') enableMidi(false); } catch (e) { /* 自動接続しないだけ */ }
 $('#dockToggle').onclick = () => setDock($('#dock').classList.contains('closed'));
