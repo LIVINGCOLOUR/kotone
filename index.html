@@ -92,12 +92,13 @@
   .gut-track { height: 56px; flex: none; font-size: 11px; color: var(--muted); display: grid; place-items: center; border-bottom: 1px solid var(--border); }
   .gut-lyr { height: 32px; flex: none; font-size: 11px; color: var(--muted); display: grid; place-items: center; border-bottom: 1px solid var(--border); }
   #lane { display: block; height: 32px; flex: none; border-bottom: 1px solid var(--border); cursor: pointer; }
-  .gut-keys { flex: 1; min-height: 0; position: relative; }
-  #rollKeys { position: absolute; inset: 0; display: block; }
+  .gut-keys { flex: 1; min-height: 0; position: relative; overflow: hidden; }
+  #rollKeys { position: absolute; top: 0; left: 0; display: block; }
   .scroller { flex: 1; min-width: 0; overflow-x: auto; overflow-y: hidden; display: flex; flex-direction: column; }
   .track { position: relative; height: 56px; flex: none; border-bottom: 1px solid var(--border); }
   .track .empty { position: absolute; left: 12px; top: 18px; font-size: 13px; color: var(--muted); white-space: nowrap; }
-  .rollbox { flex: 1; min-height: 0; position: relative; }
+  .rollbox { flex: 1; min-height: 0; position: relative; overflow-x: hidden; overflow-y: auto; scrollbar-width: none; }
+  .rollbox::-webkit-scrollbar { display: none; }
   #roll { position: absolute; top: 0; left: 0; display: block; touch-action: none; cursor: crosshair; }
   .block { position: absolute; top: 4px; bottom: 4px; border-radius: 8px; background: var(--chip); border: 2px solid transparent;
     cursor: pointer; padding: 3px 7px; overflow: hidden; }
@@ -189,6 +190,7 @@
   .wk.tone, .bk.tone { background: #d9485f; color: #fff; }
   .wk.down, .bk.down { filter: brightness(.75); }
   .wk .pc { font-weight: 700; }
+  .wk.pcmap, .bk.pcmap { box-shadow: inset 0 4px 0 #d9485f; }
   .keys-wrap { display: flex; gap: 14px; align-items: flex-start; }
   .keys-wrap .piano { flex: 1; min-width: 0; }
   .gdiag { flex: none; text-align: center; font-size: 11px; color: var(--muted); }
@@ -1303,15 +1305,18 @@ function renderSections() {
 
 // ---- コードトラックとピアノロールの共通の寸法 ----
 const MIN_PPB = 28; // 1拍あたりの最小の幅(px)。これより詰まるなら横スクロール
+const ROLL_LO = 48, ROLL_HI = 96; // ピアノロールで常に置ける音域（C3〜C7）
+const ROW_MIN = 14;               // 1行の最小の高さ(px)。収まらない分は上下にスクロール
 function rollGeom() {
   const sec = curSec();
   const total = secBeats(sec);
   const viewW = $('#scroller').clientWidth;
-  const H = $('#rollbox').clientHeight;
+  const viewH = $('#rollbox').clientHeight;
   const ppb = total ? Math.max(viewW / total, MIN_PPB) : 0;
   const ms = sec.melody;
-  const lo = Math.min(55, ...ms.map(n => n.m)), hi = Math.max(84, ...ms.map(n => n.m));
-  return { sec, total, ppb, W: total ? Math.floor(total * ppb) : viewW, H, lo, hi, rowH: H / (hi - lo + 1) };
+  const lo = Math.min(ROLL_LO, ...ms.map(n => n.m)), hi = Math.max(ROLL_HI, ...ms.map(n => n.m));
+  const rowH = Math.max(ROW_MIN, viewH / (hi - lo + 1));
+  return { sec, total, ppb, W: total ? Math.floor(total * ppb) : viewW, H: Math.round((hi - lo + 1) * rowH), viewH, lo, hi, rowH };
 }
 
 function renderSection() {
@@ -1457,9 +1462,17 @@ function renderRoll() {
   c2.fillStyle = col('--panel'); c2.fillRect(0, 0, W, H);
   for (let m = lo; m <= hi; m++) if (isBlack(m)) { c2.fillStyle = col('--row-black'); c2.fillRect(0, y(m), W, rowH); }
   renderRollKeys(g);
+  const box = $('#rollbox');
+  if (ui.rollCentered !== sec.id && g.viewH) {
+    const ms = sec.melody;
+    const center = ms.length ? ms.reduce((a, n) => a + n.m, 0) / ms.length : 72;
+    box.scrollTop = Math.max(0, (hi - center + 0.5) * rowH - g.viewH / 2);
+    ui.rollCentered = sec.id;
+  }
+  $('.gut-keys').scrollTop = box.scrollTop;
   if (!total) {
     c2.fillStyle = col('--muted'); c2.font = '12px system-ui, sans-serif';
-    c2.fillText('コードを置くと、ここでメロディを編集できます（クリックで音を追加、R で録音）', 12, 24);
+    c2.fillText('コードを置くと、ここでメロディを編集できます（クリックで音を追加、R で録音）', 12, box.scrollTop + 24);
     return;
   }
   const key = secKey(sec);
@@ -1756,6 +1769,7 @@ function focusInfo() {
   return c ? chordInfo(c, secKey(sec)) : null;
 }
 
+const KEYS_LO = 48, KEYS_HI = 96; // 下の鍵盤の音域（C3〜C7）
 function renderPiano() {
   const sec = curSec(), key = secKey(sec);
   const info = focusInfo();
@@ -1771,11 +1785,12 @@ function renderPiano() {
   const root = $('#piano');
   root.innerHTML = '';
   const whites = [];
-  for (let m = ui.oct; m <= ui.oct + 24; m++) if (NAT.includes(m % 12)) whites.push(m);
+  for (let m = KEYS_LO; m <= KEYS_HI; m++) if (NAT.includes(m % 12)) whites.push(m);
   const w = 100 / whites.length;
   const cls = m => {
     const pc = m % 12;
-    return (tones.has(pc) ? ' tone' : avoid.has(pc) ? ' avoid' : scale.has(pc) ? ' ok' : '') + (down.has(m) ? ' down' : '');
+    return (tones.has(pc) ? ' tone' : avoid.has(pc) ? ' avoid' : scale.has(pc) ? ' ok' : '') + (down.has(m) ? ' down' : '')
+      + (keyChar[m] ? ' pcmap' : '');
   };
   const bind = (el, m) => {
     el.onpointerdown = e => { e.preventDefault(); noteOn('p' + m, m); };
@@ -1788,7 +1803,7 @@ function renderPiano() {
     bind(el, m);
     root.appendChild(el);
     const b = m + 1;
-    if (b <= ui.oct + 24 && !NAT.includes(b % 12)) {
+    if (b <= KEYS_HI && !NAT.includes(b % 12)) {
       const bk = document.createElement('div');
       bk.className = 'bk' + cls(b);
       bk.style.left = `calc(${(i + 1) * w}% - ${w * 0.3}%)`;
@@ -2347,6 +2362,8 @@ roll.addEventListener('dblclick', e => {
 });
 roll.addEventListener('contextmenu', e => e.preventDefault());
 roll.addEventListener('pointerleave', () => { if (ui.hover) { ui.hover = null; renderRoll(); } });
+$('#rollbox').addEventListener('scroll', () => { $('.gut-keys').scrollTop = $('#rollbox').scrollTop; });
+$('.gut-keys').addEventListener('wheel', e => { $('#rollbox').scrollTop += e.deltaY; e.preventDefault(); }, { passive: false });
 // 歌詞レーン：クリックでその音を選ぶ、ダブルクリックで「のばし」を切り替え
 $('#lane').addEventListener('click', e => {
   const i = laneHit(e);
@@ -2414,8 +2431,8 @@ window.addEventListener('keydown', e => {
   if (k === 'escape') { ui.sel = -1; ui.note = -1; closeMenu(); render(); return; }
   if (k === 'r') { toggleRec(); return; }
   if (k === '-' && n) { toggleTie(ui.note); return; }
-  if (k === 'z') { ui.oct = Math.max(36, ui.oct - 12); renderPiano(); return; }
-  if (k === 'x') { ui.oct = Math.min(84, ui.oct + 12); renderPiano(); return; }
+  if (k === 'z') { ui.oct = Math.max(KEYS_LO, ui.oct - 12); renderPiano(); return; }
+  if (k === 'x') { ui.oct = Math.min(KEYS_HI - 12, ui.oct + 12); renderPiano(); return; } // 弾ける範囲の始まりは C3〜C6
   if (k in KEYMAP) { e.preventDefault(); if (!e.repeat) noteOn(k, ui.oct + KEYMAP[k]); }
 });
 window.addEventListener('keyup', e => noteOff(e.key.toLowerCase()));
