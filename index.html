@@ -13,7 +13,7 @@
     --row-black: rgba(0, 0, 0, .04); --grid: rgba(0, 0, 0, .05); --grid-mid: rgba(0, 0, 0, .10); --grid-strong: rgba(0, 0, 0, .22);
     --tone-row: rgba(217, 72, 95, .10);
     /* 鍵盤はテーマに関係なく明るい鍵盤の上で色を見分けられるようにする */
-    --k-white: #fbfbfa; --k-black: #26282c; --k-ok: #c3ebce; --k-ok-b: #3f7a52; --k-avoid: #f8d2a2; --k-avoid-b: #99622a;
+    --k-white: #fbfbfa; --k-black: #26282c;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -186,15 +186,25 @@
   .bk { position: absolute; top: 0; height: 60%; background: var(--k-black); border-radius: 0 0 4px 4px; z-index: 2;
     display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding-bottom: 3px;
     font-size: 10px; color: #bbb; cursor: pointer; }
-  .wk.ok { background: var(--k-ok); } .bk.ok { background: var(--k-ok-b); color: #fff; }
-  .wk.avoid { background: var(--k-avoid); } .bk.avoid { background: var(--k-avoid-b); color: #fff; }
-  .wk.tone, .bk.tone { background: #d9485f; color: #fff; }
-  .wk.down, .bk.down { filter: brightness(.75); }
-  .wk .pc { font-weight: 700; }
-  .wk.pcmap, .bk.pcmap { box-shadow: inset 0 4px 0 #3b82f6; }
-  /* 「音階だけ」「ヨナ抜き」で弾けない鍵盤は灰色に（半透明だと背景が透けて紛らわしいため塗る） */
-  .wk.off { background: #c8c8cc !important; color: #8a8a8f !important; }
-  .bk.off { background: #6a6c72 !important; }
+  /* 鍵盤は普通の白黒のまま、情報は「印」で示す（構成音＝赤い丸、根音は大きく／ぶつかりやすい音＝オレンジの小さな丸） */
+  .dot { width: 12px; height: 12px; border-radius: 50%; background: #d9485f; margin-bottom: 4px; flex: none; }
+  .dot.root { width: 16px; height: 16px; box-shadow: 0 0 0 2px #fff, 0 0 0 3px #d9485f; }
+  .dot.avoid { width: 8px; height: 8px; background: #f08c2a; }
+  .bk .dot { margin-bottom: 5px; box-shadow: 0 0 0 2px #26282c; }
+  .bk .dot.root { box-shadow: 0 0 0 2px #fff, 0 0 0 3px #d9485f; }
+  /* PCのキー：キーボードのキーのような枠付きの文字 */
+  .kc { font: 700 10px ui-monospace, monospace; min-width: 16px; padding: 0 3px; line-height: 14px; text-align: center;
+    border: 1px solid #a5a5aa; border-bottom-width: 2px; border-radius: 4px; background: #fff; color: #333; margin-bottom: 3px; }
+  .bk .kc { background: #3c3e44; border-color: #75777d; color: #eee; margin-bottom: 4px; }
+  .cname { font-size: 10px; font-weight: 700; color: #777; line-height: 12px; }
+  /* PCで弾ける範囲の外は少し暗く、「音階だけ」「ヨナ抜き」で弾けない音はもう少し暗く（鍵盤の見た目は残す） */
+  .wk.out { background: #d4d4d8; }
+  .wk.off { background: #b4b4b9; }
+  .bk.off { background: #4b4d53; }
+  .wk.down, .bk.down { background: #ffd166 !important; }
+  .legend .lg-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #d9485f; vertical-align: -1px; margin-right: 4px; }
+  .legend .lg-dot.avoid { width: 7px; height: 7px; background: #f08c2a; vertical-align: 0; }
+  .legend .kc { display: inline-block; margin: 0 4px 0 0; }
   #keyMode { font-size: 12px; padding: 3px 4px; }
   .keys-wrap { display: flex; gap: 14px; align-items: flex-start; }
   .keys-wrap .piano { flex: 1; min-width: 0; }
@@ -350,10 +360,9 @@
     <div class="row">
       <h2 id="pianoTitle">鍵盤</h2>
       <div class="legend">
-        <span><i style="background:#d9485f"></i>構成音</span>
-        <span><i style="background:var(--k-ok)"></i>使いやすい音</span>
-        <span><i style="background:var(--k-avoid)"></i>ぶつかりやすい音</span>
-        <span><i style="background:#3b82f6"></i>PCで弾ける範囲</span>
+        <span><b class="lg-dot"></b>構成音（大きい丸は根音）</span>
+        <span><b class="lg-dot avoid"></b>ぶつかりやすい音</span>
+        <span><b class="kc">Z</b>PCのキー</span>
       </div>
       <div class="spacer"></div>
       <span class="small dock-hint" id="keyHint"></span>
@@ -1877,11 +1886,12 @@ function renderPiano() {
   const tones = new Set(info ? info.pcs : []);
   const avoid = new Set([...scale].filter(p => !tones.has(p) && tones.has((p + 11) % 12)));
   const down = new Set(Object.values(held).map(h => h.m));
+  // 1つの音に PCのキーが2つある所（2段が重なる音域）は、上の段のキー（Q W E…）だけを表示する（後から割り当てた方で上書き）
   const keyChar = {};
-  for (const code of mappedCodes()) {
-    const m = keyToMidi(code);
-    keyChar[m] = keyChar[m] ? keyChar[m] + ' ' + keyLabel(code) : keyLabel(code);
-  }
+  for (const code of mappedCodes()) keyChar[keyToMidi(code)] = keyLabel(code);
+  const pcKeys = Object.keys(keyChar).map(Number);
+  const pcLo = Math.min(...pcKeys), pcHi = Math.max(...pcKeys);
+  const rootPc = info ? info.pcs[0] : null;
   const rows = ui.keyMode === 'all'
     ? `${keyLabel('KeyZ')}〜${keyLabel('KeyM')}・${keyLabel('KeyQ')}〜${keyLabel('KeyU')}`
     : `${keyLabel('KeyZ')}〜${keyLabel('Slash')}・${keyLabel('KeyQ')}〜${keyLabel('KeyP')}`;
@@ -1899,8 +1909,15 @@ function renderPiano() {
   const w = 100 / whites.length;
   const cls = m => {
     const pc = m % 12;
-    return (tones.has(pc) ? ' tone' : avoid.has(pc) ? ' avoid' : scale.has(pc) ? ' ok' : '') + (down.has(m) ? ' down' : '')
-      + (keyChar[m] ? ' pcmap' : '') + (playable && !playable.has(pc) ? ' off' : '');
+    return (down.has(m) ? ' down' : '') + (playable && !playable.has(pc) ? ' off' : (m < pcLo || m > pcHi ? ' out' : ''));
+  };
+  // 鍵盤の中身：上から 印（丸）→ PCのキー → 音名（C だけ）
+  const inner = m => {
+    const pc = m % 12;
+    const dot = tones.has(pc) ? `<span class="dot${pc === rootPc ? ' root' : ''}"></span>` : avoid.has(pc) ? '<span class="dot avoid"></span>' : '';
+    const kc = keyChar[m] ? `<span class="kc">${esc(keyChar[m])}</span>` : '';
+    const cname = pc === 0 ? `<span class="cname">C${m / 12 - 1}</span>` : '';
+    return dot + kc + cname;
   };
   const bind = (el, m) => {
     el.onpointerdown = e => { e.preventDefault(); noteOn('p' + m, m); };
@@ -1909,7 +1926,8 @@ function renderPiano() {
   whites.forEach((m, i) => {
     const el = document.createElement('div');
     el.className = 'wk' + cls(m);
-    el.innerHTML = `<span class="pc">${m % 12 === 0 ? 'C' + (m / 12 - 1) : PC_NAME[m % 12]}</span>${keyChar[m] || ''}`;
+    el.title = noteName(m);
+    el.innerHTML = inner(m);
     bind(el, m);
     root.appendChild(el);
     const b = m + 1;
@@ -1918,7 +1936,8 @@ function renderPiano() {
       bk.className = 'bk' + cls(b);
       bk.style.left = `calc(${(i + 1) * w}% - ${w * 0.3}%)`;
       bk.style.width = w * 0.6 + '%';
-      bk.innerHTML = keyChar[b] || '';
+      bk.title = noteName(b);
+      bk.innerHTML = inner(b);
       bind(bk, b);
       root.appendChild(bk);
     }

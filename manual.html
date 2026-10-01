@@ -272,14 +272,14 @@
 
     <section id="keyboard">
       <h2>8. 鍵盤の見方</h2>
-      <p>画面下の鍵盤は、<b>今のコードの上でどの音をメロディに使うとよいか</b>を色で示します。選んでいるコード（再生中は鳴っているコード、何も選んでいなければ最後のコード）が基準です。</p>
+      <p>画面下の鍵盤は、<b>今のコードの上でどの音をメロディに使うとよいか</b>を、鍵盤の下の方の<b>丸い印</b>で示します。選んでいるコード（再生中は鳴っているコード、何も選んでいなければ最後のコード）が基準です。</p>
       <table>
-        <tr><th>色</th><th>意味</th><th>使い方</th></tr>
-        <tr><td><span class="sw" style="background:var(--accent)"></span> 赤</td><td>コードの構成音</td><td>小節の頭や、長く伸ばす音に置くと安定します</td></tr>
-        <tr><td><span class="sw" style="background:var(--ok)"></span> 緑</td><td>キーの音階の中の、使いやすい音</td><td>経過音や、動きをつける音に向いています</td></tr>
-        <tr><td><span class="sw" style="background:var(--avoid)"></span> オレンジ</td><td>ぶつかりやすい音（構成音の半音上）</td><td>伸ばすと濁りやすい音です。通り過ぎるだけなら使えます</td></tr>
-        <tr><td>色なし</td><td>キーの音階の外の音</td><td>意図がないと浮きやすい音です</td></tr>
+        <tr><th>印</th><th>意味</th><th>使い方</th></tr>
+        <tr><td><span class="sw" style="background:var(--accent);border-radius:50%"></span> 赤い丸</td><td>コードの構成音（<b>大きい丸は根音</b>）</td><td>小節の頭や、長く伸ばす音に置くと安定します</td></tr>
+        <tr><td><span class="sw" style="background:#f08c2a;border-radius:50%;width:9px;height:9px"></span> オレンジの小さな丸</td><td>ぶつかりやすい音（構成音の半音上）</td><td>伸ばすと濁りやすい音です。通り過ぎるだけなら使えます</td></tr>
+        <tr><td>印なし</td><td>それ以外の音</td><td>音階の音なら、経過音など短い音に使えます</td></tr>
       </table>
+      <p>鍵盤の中の枠付きの文字（<kbd>Z</kbd> など）は、その音を鳴らす PCのキーです。PCで弾ける範囲の外の鍵盤は少し暗く、「音階だけ」「ヨナ抜き」で弾けない音の鍵盤はもう少し暗く表示されます。音名は C だけ（C3・C4…）表示し、ほかはマウスを乗せると出ます。押している鍵盤は黄色になります。</p>
       <p>鍵盤は <b>C3〜C7 の4オクターブ</b>です。クリックでも鳴らせます。</p>
       <h3>弾き方1：MIDIキーボード（おすすめ）</h3>
       <p>USB や Bluetooth でつないだ MIDIキーボードで弾けます。<b>Chrome（または Edge・Firefox）で開いてください。Safari では使えません。</b></p>
@@ -305,7 +305,7 @@
         <tr><td>下の段</td><td><kbd>Z</kbd> <kbd>X</kbd> <kbd>C</kbd> <kbd>V</kbd> <kbd>B</kbd> <kbd>N</kbd> <kbd>M</kbd>（続けて <kbd>,</kbd> <kbd>.</kbd> <kbd>/</kbd>）</td><td><kbd>S</kbd> <kbd>D</kbd> <kbd>G</kbd> <kbd>H</kbd> <kbd>J</kbd>（<kbd>L</kbd> <kbd>;</kbd>）</td><td>C4〜E5</td></tr>
         <tr><td>上の段</td><td><kbd>Q</kbd> <kbd>W</kbd> <kbd>E</kbd> <kbd>R</kbd> <kbd>T</kbd> <kbd>Y</kbd> <kbd>U</kbd>（続けて <kbd>I</kbd> <kbd>O</kbd> <kbd>P</kbd>）</td><td><kbd>2</kbd> <kbd>3</kbd> <kbd>5</kbd> <kbd>6</kbd> <kbd>7</kbd>（<kbd>9</kbd> <kbd>0</kbd>）</td><td>C5〜E6</td></tr>
       </table>
-      <p><b>P の右隣の2つのキー</b>（US配列では <kbd>[</kbd> <kbd>]</kbd>、日本語配列では <kbd>@</kbd> <kbd>[</kbd>）で、全体を1オクターブずつ上下に動かせます（下の段の始まりは C3〜C5）。PCのキーボードで弾ける範囲は、鍵盤の上端が<b>青い帯</b>になり、キーの文字も表示されます（鍵盤全体の赤はコードの構成音で、別の意味です）。キーの位置で判定するので、日本語配列でも同じ位置で弾けます。</p>
+      <p><b>P の右隣の2つのキー</b>（US配列では <kbd>[</kbd> <kbd>]</kbd>、日本語配列では <kbd>@</kbd> <kbd>[</kbd>）で、全体を1オクターブずつ上下に動かせます（下の段の始まりは C3〜C5）。PCのキーボードで弾ける鍵盤には、キーの文字が枠付きで表示されます（範囲の外の鍵盤は少し暗くなります）。キーの位置で判定するので、日本語配列でも同じ位置で弾けます。</p>
     </section>
 
     <section id="export">
