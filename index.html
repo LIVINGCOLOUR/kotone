@@ -217,7 +217,10 @@
   /* 狭い画面・低い画面では、ページ全体をスクロールする縦並びに戻す */
   .menu.left .menu-body { right: auto; left: 0; }
   /* 幅が狭いときは上のバーの見出しの文字を省いて1段に収める（マウスを乗せると名前が出る） */
-  @media (max-width: 1240px) { .bar .lbl { display: none; } .brand { padding-right: 6px; } }
+  /* 選択欄は中身に合わせて細めに（上のバーを1段に収めるため） */
+  #instrument { max-width: 128px; }
+  #pattern { max-width: 104px; }
+  @media (max-width: 1320px) { .bar .lbl { display: none; } .brand { padding-right: 6px; } }
   @media (max-width: 1120px) {
     .title { width: 96px; }
     #instrument { max-width: 110px; }
@@ -263,6 +266,7 @@
     <button id="playSec" class="primary">▶ 再生</button>
     <button id="playSong">▶ 曲全体</button>
     <button id="rec" title="録音（Shift+R）">● 録音</button>
+    <button id="humBtn" title="コード進行を流しながら歌うと、声の高さを読み取ってメロディにします（Shift+H・ヘッドホン推奨）">🎤 鼻歌</button>
     <div class="spacer"></div>
     <span id="status" class="status"></span>
   </header>
@@ -1031,7 +1035,7 @@ function buildPlan(ids, fixedVerse) {
 
 let playback = null;
 
-function play(kind) {
+function play(kind, lead = 0) {
   if (playback) {
     const same = playback.kind === kind;
     stop();
@@ -1040,7 +1044,7 @@ function play(kind) {
   audio();
   const out = ctx.createGain(); out.connect(master);
   playback = { kind, out, timers: [], passes: [] };
-  if (!schedulePass(ctx.currentTime + 0.1)) { playback = null; return; }
+  if (!schedulePass(ctx.currentTime + 0.1 + lead)) { playback = null; return; }
   updateButtons();
   requestAnimationFrame(tick);
 }
@@ -1118,6 +1122,8 @@ function updateButtons() {
   $('#playSong').textContent = playback?.kind === 'song' ? '■ 停止' : '▶ 曲全体';
   $('#rec').textContent = ui.recording ? '● 録音中' : '● 録音';
   $('#rec').classList.toggle('rec-on', ui.recording);
+  $('#humBtn').textContent = hum.active ? '🎤 歌唱中…' : '🎤 鼻歌';
+  $('#humBtn').classList.toggle('rec-on', hum.active);
 }
 
 // ================= 録音と手弾き =================
@@ -1207,6 +1213,188 @@ function renderMidiStatus() {
   b.textContent = names.length ? `🎹 ${names[0]}${names.length > 1 ? ` ほか${names.length - 1}台` : ''}` : '🎹 MIDI：機器なし';
   b.classList.toggle('midi-on', names.length > 0);
   b.title = names.length ? `接続中：${names.join('、')}` : 'MIDIキーボードを USB でつないでください';
+}
+
+// ================= 鼻歌入力（声の高さを読み取ってメロディにする） =================
+// セクションのコード進行を流し、1小節のカウントのあと1周歌ってもらう。声の高さを 16ms ごとに測って記録し、
+// 1周終わったら、ならして・音階に寄せて・区切って・拍にそろえ、音符にする
+const hum = { stream: null, an: null, buf: null, ctxOf: null, frames: [], noise: [], th: null, active: false, timer: 0, endAt: 0 };
+
+// YIN 法で声の基本周波数を求める（80〜1000Hz）。{hz, clarity} を返す。周期が見つからなければ null
+function yin(x, sr) {
+  const W = x.length >> 1, tMin = Math.floor(sr / 1000), tMax = Math.min(W - 1, Math.ceil(sr / 80));
+  const d = new Float32Array(tMax + 2);
+  for (let t = 1; t <= tMax + 1; t++) {
+    let s = 0;
+    for (let j = 0; j < W; j++) { const v = x[j] - x[j + t]; s += v * v; }
+    d[t] = s;
+  }
+  const c = new Float32Array(tMax + 2);
+  let sum = 0;
+  for (let t = 1; t <= tMax + 1; t++) { sum += d[t]; c[t] = sum ? d[t] * t / sum : 1; }
+  for (let t = tMin; t <= tMax; t++) {
+    if (c[t] >= 0.15) continue;
+    while (t < tMax && c[t + 1] < c[t]) t++;
+    const a = c[t - 1], b = c[t], e = c[t + 1], den = a + e - 2 * b;
+    return { hz: sr / (t + (den ? (a - e) / (2 * den) : 0)), clarity: 1 - b };
+  }
+  return null;
+}
+
+// 歌声の遅れ：解析する区間の中ほど（約30ms）＋マイクの遅れ＋伴奏が耳に届くまでの遅れ
+const humLatency = () => 0.032 + 0.015 + (ctx.outputLatency || 0.02);
+
+async function toggleHum() {
+  if (hum.active) { finishHum(true); return; }
+  const sec = curSec();
+  if (!sec.chords.length) { alert('先にコード進行を作ってください。歌はコード進行に合わせて入れます。'); return; }
+  if (!navigator.mediaDevices?.getUserMedia) { alert('このブラウザはマイク入力に対応していません。Chrome で開いてください。'); return; }
+  audio();
+  try {
+    hum.stream ??= await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: false } });
+  } catch (e) {
+    alert('マイクの使用が許可されませんでした。アドレスバーの左のアイコンから「マイク」を許可してください。');
+    return;
+  }
+  if (hum.ctxOf !== ctx) {
+    hum.an = ctx.createAnalyser();
+    hum.an.fftSize = 2048;
+    ctx.createMediaStreamSource(hum.stream).connect(hum.an); // スピーカーにはつながない（ハウリング防止）
+    hum.buf = new Float32Array(2048);
+    hum.ctxOf = ctx;
+  }
+  if (playback) stop();
+  ui.recording = false;
+  const beat = 60 / song.bpm;
+  play('section', 4 * beat);                      // 1小節のカウントのあとにセクションが始まる
+  if (!playback) return;
+  const p = playback.passes[0];
+  for (let i = 0; i < 4; i++) note(master, i ? 84 : 96, p.t0 - (4 - i) * beat, 0.08, 0.5);  // カウントの音
+  hum.endAt = p.t0 + p.plan.total * p.beat;
+  hum.frames = []; hum.noise = []; hum.th = null; hum.active = true;
+  ui.humTrail = [];
+  $('#status').textContent = '🎤 カウントのあと、歌ってください（ヘッドホン推奨）';
+  updateButtons();
+  hum.timer = setInterval(humTick, 16);
+}
+
+function humTick() {
+  if (!hum.active) return;
+  if (!playback || playback.kind !== 'section') { finishHum(true); return; } // 途中で止められた
+  const p = playback.passes[0], now = ctx.currentTime;
+  hum.an.getFloatTimeDomainData(hum.buf);
+  let s = 0;
+  for (const v of hum.buf) s += v * v;
+  const rms = Math.sqrt(s / hum.buf.length);
+  const at = now - humLatency();
+  if (at < p.t0) { hum.noise.push(rms); return; }        // カウント中は、部屋の雑音の大きさを測る
+  if (hum.th === null) {
+    const n = hum.noise.sort((a, b) => a - b);
+    hum.th = Math.max(0.006, (n[n.length >> 1] || 0) * 4);
+    $('#status').textContent = '🎤 歌ってください';
+  }
+  const r = rms > hum.th ? yin(hum.buf, ctx.sampleRate) : null;
+  const m = r && r.clarity > 0.8 ? 69 + 12 * Math.log2(r.hz / 440) : null;
+  const b = (at - p.t0) / p.beat;
+  hum.frames.push({ b, m, rms });
+  if (m !== null && m > 30 && m < 100) ui.humTrail.push({ b, m });
+  if (now >= hum.endAt + 0.15) finishHum(false);
+}
+
+function finishHum(cancel) {
+  clearInterval(hum.timer);
+  hum.active = false;
+  ui.humTrail = null;
+  if (playback) stop();
+  updateButtons();
+  setStatus();
+  if (cancel) return;
+  const sec = curSec();
+  const notes = framesToNotes(hum.frames, secBeats(sec), 60 / song.bpm);
+  if (!notes.length) {
+    alert('声を読み取れませんでした。マイクの音量を上げるか、もう少しはっきり歌ってみてください（ヘッドホン推奨）。');
+    return;
+  }
+  sec.melody = notes;
+  ui.note = -1; ui.sel = -1; ui.rollCentered = null;
+  changed();
+  $('#status').textContent = `🎤 ${notes.length}音を入れました（気になる所はピアノロールで直せます）`;
+  setTimeout(setStatus, 5000);
+}
+
+const modeOf = arr => {
+  const cnt = new Map();
+  for (const x of arr) cnt.set(x, (cnt.get(x) || 0) + 1);
+  return [...cnt].sort((a, b) => b[1] - a[1])[0][0];
+};
+
+// 声の記録（拍の位置と、そのときの高さ）を音符にする
+function framesToNotes(frames, total, beatSec) {
+  const snap = ui.snap, frameBeats = 0.016 / beatSec;
+  const f = frames.filter(x => x.b >= 0 && x.b < total);
+  // 1. 前後のコマの中央値でならす（一瞬の揺れを抑える）
+  const sm = f.map((x, i) => {
+    if (x.m === null) return null;
+    const win = [];
+    for (let j = i - 2; j <= i + 2; j++) if (f[j] && f[j].m !== null) win.push(f[j].m);
+    win.sort((a, b) => a - b);
+    return win[win.length >> 1];
+  });
+  // 2. オクターブの取り違え（直前からちょうど1オクターブ跳ぶ）を戻す
+  let prev = null;
+  for (let i = 0; i < sm.length; i++) {
+    if (sm[i] === null) continue;
+    const dlt = prev === null ? 0 : sm[i] - prev;
+    if (Math.abs(Math.abs(dlt) - 12) < 1) sm[i] -= 12 * Math.sign(dlt);
+    prev = sm[i];
+  }
+  // 3. 区切る：声が途切れた所（子音・息継ぎ）、別の高さが3コマ以上続いた所、
+  //    声は続いていても音量がいったん大きく下がって戻った所（同じ高さで「ま・ど」と歌い直した所）で新しい音符にする
+  const q = m => snapToScale(Math.round(m)); // 「音階だけ」「ヨナ抜き」では音階の音に寄せる
+  const segs = [];
+  let cur = null, gap = 0, alt = null, altN = 0;
+  sm.forEach((m, i) => {
+    const b = f[i].b, rms = f[i].rms || 0;
+    if (m === null) { if (++gap >= 2 && cur) { segs.push(cur); cur = null; } return; }
+    gap = 0;
+    const pq = q(m);
+    if (!cur) { cur = { b0: b, b1: b, ps: [pq], peak: rms, dip: false }; alt = null; altN = 0; return; }
+    if (rms < cur.peak * 0.5) cur.dip = true;
+    else if (cur.dip && rms > cur.peak * 0.75 && b - cur.b0 > snap * 0.6) {
+      segs.push({ ...cur, b1: b - frameBeats });
+      cur = { b0: b, b1: b, ps: [pq], peak: rms, dip: false };
+      alt = null; altN = 0;
+      return;
+    }
+    cur.peak = Math.max(cur.peak, rms);
+    if (pq !== modeOf(cur.ps)) {
+      if (pq === alt) altN++; else { alt = pq; altN = 1; }
+      if (altN >= 3) {
+        const start = f[i - altN + 1].b;
+        segs.push({ ...cur, b1: start - frameBeats });
+        cur = { b0: start, b1: b, ps: Array(altN).fill(pq), peak: rms, dip: false };
+        alt = null; altN = 0;
+        return;
+      }
+    } else { alt = null; altN = 0; }
+    cur.ps.push(pq);
+    cur.b1 = b;
+  });
+  if (cur) segs.push(cur);
+  // 4. 拍にそろえる（短すぎるものは捨て、重なりは前の音を縮める）
+  const out = [];
+  for (const sg of segs) {
+    if (sg.b1 + frameBeats - sg.b0 < snap * 0.4) continue;
+    let t = Math.round(sg.b0 / snap) * snap;
+    let e = Math.round((sg.b1 + frameBeats) / snap) * snap;
+    t = Math.min(t, total - snap);
+    e = Math.min(Math.max(e, t + snap), total);
+    const pv = out[out.length - 1];
+    if (pv && pv.t >= t) continue;
+    if (pv && pv.t + pv.d > t) pv.d = t - pv.t;
+    out.push({ t, d: e - t, m: modeOf(sg.ps) });
+  }
+  return out;
 }
 
 function toggleRec() {
@@ -1510,7 +1698,12 @@ function renderInspector() {
       Object.assign(document.createElement('div'), { className: 'spacer' }),
       hint(cnt ? `メロディ ${cnt}音` : 'メロディなし'),
     );
-    if (cnt) box.append(smallButton('メロディを消す', () => { sec.melody = []; ui.note = -1; changed(); }));
+    if (cnt) {
+      // 低い声・高い声で歌ったときに、メロディ全体の高さを合わせる
+      const shift = dir => () => { sec.melody.forEach(n => { n.m = Math.min(108, Math.max(21, n.m + 12 * dir)); }); ui.rollCentered = null; changed(); };
+      box.append(smallButton('オクターブ↑', shift(1)), smallButton('オクターブ↓', shift(-1)),
+        smallButton('メロディを消す', () => { sec.melody = []; ui.note = -1; changed(); }));
+    }
   }
 }
 
@@ -1611,6 +1804,13 @@ function renderRoll() {
       c2.fillStyle = col('--accent'); c2.fillRect(hx, hy - 18, tw + 8, 16);
       c2.fillStyle = '#fff'; c2.fillText(mo.text, hx + 4, hy - 10);
     }
+  }
+  // 鼻歌：読み取った声の高さを青い点で（今の声は大きく）
+  if (ui.humTrail && ui.humTrail.length) {
+    c2.fillStyle = '#3b82f6';
+    for (const p of ui.humTrail) if (p.b < total) c2.fillRect(p.b * ppb - 1.5, (hi - p.m + 0.5) * rowH - 1.5, 3, 3);
+    const last = ui.humTrail[ui.humTrail.length - 1];
+    c2.beginPath(); c2.arc(last.b * ppb, (hi - last.m + 0.5) * rowH, 6, 0, Math.PI * 2); c2.fill();
   }
   // 再生位置
   if (ui.playhead && ui.playhead.sec === sec.id) {
@@ -2404,6 +2604,7 @@ $('#addArr').onchange = e => { if (e.target.value) song.arrangement.push(e.targe
 $('#playSec').onclick = () => play('section');
 $('#playSong').onclick = () => play('song');
 $('#rec').onclick = toggleRec;
+$('#humBtn').onclick = toggleHum;
 $('#undoBtn').onclick = () => restore(-1);
 $('#redoBtn').onclick = () => restore(1);
 $('#clear').onclick = () => {
@@ -2561,6 +2762,7 @@ window.addEventListener('keydown', e => {
   }
   if (k === 'escape') { ui.sel = -1; ui.note = -1; closeMenu(); render(); return; }
   if (e.code === 'KeyR' && e.shiftKey) { toggleRec(); return; }
+  if (e.code === 'KeyH' && e.shiftKey) { toggleHum(); return; }
   if (k === '-' && n) { toggleTie(ui.note); return; }
   // オクターブは [ ] （P の右隣の2つのキー）。下の段の始まりを C3〜C5 の間で動かす
   if (e.code === 'BracketLeft') { e.preventDefault(); ui.oct = Math.max(KEYS_LO, ui.oct - 12); renderPiano(); return; }
