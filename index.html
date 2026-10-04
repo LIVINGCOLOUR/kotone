@@ -3116,6 +3116,67 @@ function pitchV2(lines, opts) {
   return key;
 }
 
+// ================= 拍へのあてはめ =================
+// 行ごとに、音の時刻（秒）を拍の位置（n.b〜n.e。行の頭が 0、1行は opts.barsPerLine 小節）に直す。テンポ（BPM）を返す
+// 方式  v1：行の歌い出しから次の行の歌い出しまでを、1行の長さに均等に伸び縮みさせる（行の間の休みが長いと、音が詰まる）
+//       v2：行ごとに、音の始まりがいちばん拍の刻みに乗るテンポを探す（行の間の休みの長さに左右されない）
+// v2 は、規則正しく歌った録音のテストでは大きく良くなるが、実際に自由に歌った録音では、行の終わりに音が詰まることが増えた
+// （歌詞の長さが行ごとに違い、行ごとに速さが変わるため）。それで標準は v1 のまま。経緯は tests/README.md
+const RHYTHM_METHOD = 'v1';
+function rhythmStage(lines, opts) {
+  const B = opts.barsPerLine * 4, grid = opts.grid, method = opts.rhythm || RHYTHM_METHOD;
+  const P = { lambda: 0.3, mu1: 0.5, mu2: 1.0, thr: 0.6, up: 2, low: 0.6, ...(opts.r2 || {}) };
+  const used = lines.filter(l => l.notes.length);
+  if (!used.length) return 92;
+  // 行の始まりと、次の行の始まり（最後の行は、最後の音の終わり＋0.6秒）
+  used.forEach((l, i) => { l.ls = l.notes[0].t0; l.le = used[i + 1] ? used[i + 1].notes[0].t0 : l.notes[l.notes.length - 1].t1 + 0.6; });
+  const spans = used.map(l => Math.max(0.5, l.le - l.ls));
+  const tauSpan = medOf(spans) / B;                         // 1拍の秒数の目安（行の長さの真ん中の値から）
+  let taus = spans.map(sp => sp / B);
+  if (method === 'v2') {
+    // 行ごとに、音の始まりが刻み（grid）と拍の頭によく乗るテンポを探す。目安のテンポから離れるほど不利にする
+    // 刻みに乗っている手がかりが弱い行（音ごとのゆれが大きい）は、v1 と同じく行の長さから決める
+    const pick = (l, ref, mu, sp) => {
+      const fallback = sp / B;
+      const ts = l.notes.map(n => n.t0 - l.ls), last = ts[ts.length - 1];
+      if (ts.length < 3) return mu === P.mu1 ? ref : fallback;
+      const lo = Math.max(0.2, last / (B - grid));          // これより速いと、行に入りきらない
+      let best = -Infinity, bt = Math.max(lo, ref), bg = 0;
+      for (let tau = lo; tau <= 1.5; tau *= 1.01) {
+        let g = 0, o = 0, ws = 0;
+        l.notes.forEach((n, i) => {
+          if (!i) return;
+          const w = Math.min(1, Math.max(0.2, n.t1 - n.t0)), u = ts[i] / tau;
+          g += w * Math.cos(2 * Math.PI * u / grid); o += w * Math.cos(2 * Math.PI * u); ws += w;
+        });
+        // 行の長さ（次の行の歌い出しまで）から決まるテンポ sp/B は、行の間の休みの分だけ遅く出る。本当のテンポはそれより速い側にあるはず
+        const top = sp / B, side = P.up ? P.up * Math.max(0, Math.log(tau / top)) + P.up * Math.max(0, Math.log(top * P.low / tau)) : 0;
+        const sc = (g + P.lambda * o) / ws - mu * Math.abs(Math.log(tau / ref)) - side;
+        if (sc > best) { best = sc; bt = tau; bg = g / ws; }
+      }
+      return bg >= P.thr || mu === P.mu1 ? bt : fallback;
+    };
+    const first = used.map((l, i) => pick(l, tauSpan, P.mu1, spans[i]));
+    const ref = medOf(first);
+    taus = used.map((l, i) => pick(l, ref, P.mu2, spans[i]));
+  }
+  used.forEach((l, li) => {
+    const ns = l.notes, tau = taus[li], toBeat = t => (t - l.ls) / tau;
+    let last = -grid;
+    for (const n of ns) {
+      let b = Math.max(last + grid, Math.round(toBeat(n.t0) / grid) * grid);
+      if (b > B - grid) b = B - grid;
+      n.b = b;
+      n.e = Math.max(b + grid, Math.round(toBeat(n.t1) / grid) * grid);
+      last = b;
+    }
+    ns.forEach((n, j) => { const nb = ns[j + 1]?.b ?? B; n.e = Math.min(n.e, nb, B); if (n.e <= n.b) n.e = n.b + grid / 2; });
+    l.guide = { t0: l.ls, t1: l.le };
+  });
+  const tau = method === 'v2' ? medOf(taus) : tauSpan;
+  return Math.round(Math.min(180, Math.max(50, 60 / tau)));
+}
+
 // starts を渡すと、行の歌い出しの時刻（秒）としてそのまま使う（タイミング合わせの結果）。渡さなければ自動で対応づける
 async function analyzeVoice(file, lyricsText, opts, progress, starts = null) {
   audio();
@@ -3252,12 +3313,6 @@ async function analyzeVoice(file, lyricsText, opts, progress, starts = null) {
 
   // ---- 6. 歌詞の音の数に合わせる（足りなければ長い音を分け、多ければ「のばし」に）と、拍へのあてはめ ----
   const bpl = opts.barsPerLine, beatsPerLine = bpl * 4, grid = opts.grid;
-  const slots = lines.map((l, i) => {
-    if (!l.notes.length) return null;
-    const nx = lines.slice(i + 1).find(o => o.notes.length);
-    return (nx ? nx.notes[0].t0 : l.notes[l.notes.length - 1].t1 + 0.6) - l.notes[0].t0;
-  }).filter(Boolean).sort((a, b) => a - b);
-  const bpm = Math.round(Math.min(180, Math.max(50, beatsPerLine / slots[slots.length >> 1] * 60)));
   lines.forEach((l, i) => {
     const ns = l.notes;
     while (ns.length && ns.length < l.mora) {                       // 長い音を2つに分ける
@@ -3271,22 +3326,8 @@ async function analyzeVoice(file, lyricsText, opts, progress, starts = null) {
       ns.map((n, j) => ({ j, cost: j === 0 ? Infinity : Math.abs(n.p - ns[j - 1].p) + (n.t1 - n.t0) }))
         .sort((a, b) => a.cost - b.cost).slice(0, extra).forEach(({ j }) => { ns[j].tie = true; });
     }
-    if (!ns.length) return;
-    const nx = lines.slice(i + 1).find(o => o.notes.length);
-    const ls = ns[0].t0, le = nx ? nx.notes[0].t0 : ns[ns.length - 1].t1 + 0.6;
-    const span = Math.max(0.5, le - ls);
-    const toBeat = t => (t - ls) / span * beatsPerLine;
-    let last = -grid;
-    for (const n of ns) {
-      let b = Math.max(last + grid, Math.round(toBeat(n.t0) / grid) * grid);
-      if (b > beatsPerLine - grid) b = beatsPerLine - grid;
-      n.b = b;
-      n.e = Math.max(b + grid, Math.round(toBeat(n.t1) / grid) * grid);
-      last = b;
-    }
-    ns.forEach((n, j) => { const nb = ns[j + 1]?.b ?? beatsPerLine; n.e = Math.min(n.e, nb, beatsPerLine); if (n.e <= n.b) n.e = n.b + grid / 2; });
-    l.guide = { t0: ls, t1: le };
   });
+  const bpm = rhythmStage(lines, opts);
   return { lines, blocks, title, bpm, key: best, phrases: phrases.length, notes: N.length, noLyrics };
 }
 
