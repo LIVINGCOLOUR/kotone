@@ -39,6 +39,7 @@ const out = await page.evaluate(({ rows, extra }) => {
   };
   const METHODS = {
     '丸めるだけ': { pitch: 'round' },
+    '歌ったまま': { pitch: 'raw' },
     'v1': { pitch: 'v1' }, 'v1＋音階': { pitch: 'v1', snapKey: true },
     'v2': { pitch: 'v2' }, 'v2＋音階': { pitch: 'v2', snapKey: true },
   };
