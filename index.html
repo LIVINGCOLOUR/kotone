@@ -170,6 +170,11 @@
   .imp-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; margin: 10px 0; }
   .imp-left, .imp-right { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
   .imp-l { font-weight: 700; color: var(--text); }
+  .imp-l b { color: var(--accent); }
+  .imp-rec audio { height: 32px; max-width: 260px; }
+  .imp-rec input[type=file] { font-size: 12px; max-width: 230px; }
+  .imp-meter { width: 90px; height: 8px; border-radius: 4px; background: var(--chip); border: 1px solid var(--border); overflow: hidden; }
+  .imp-meter i { display: block; height: 100%; width: 0; background: #1f9d55; }
   #impLyrics { flex: 1; min-height: 0; resize: none; font: inherit; font-size: 14px; line-height: 1.7; padding: 8px 10px; border-radius: 8px;
     border: 1px solid var(--border); background: var(--bg); color: var(--text); }
   #impCheck .warn { color: var(--warn); }
@@ -457,15 +462,22 @@
       <span class="small">歌の録音から声の高さを読み取り、歌詞の行と合わせて、メロディとコードを作ります（今の曲は置き換わります。↶ で戻せます）</span></div>
     <div class="imp-body">
       <div class="imp-left">
-        <label class="imp-l">1. 音声ファイル（m4a・mp3・wav など。声だけの録音がおすすめ）</label>
-        <input id="impFile" type="file" accept="audio/*,.m4a,.mp3,.wav,.aac">
-        <label class="imp-l">2. 歌った歌詞（歌った順。<code>[Aメロ]</code> などの見出しと、<code>涙(なみだ)</code> のような読みがあると正確になります）</label>
+        <label class="imp-l">1. 歌（ここで録音するか、録音したファイルを選びます。声だけの録音がおすすめ）</label>
+        <div class="row imp-rec">
+          <button id="impRec" title="このPCのマイクで録音します。伴奏やメトロノームは鳴りません。好きなテンポで歌ってください">● 録音する</button>
+          <span id="impRecTime" class="small"></span>
+          <span class="imp-meter" id="impMeter" hidden><i></i></span>
+          <audio id="impAudio" controls hidden></audio>
+          <span class="small" id="impOr">または</span>
+          <input id="impFile" type="file" accept="audio/*,.m4a,.mp3,.wav,.aac">
+        </div>
+        <div class="imp-l small">2. 歌った歌詞（<b>なくても作れます</b>。あれば歌った順に。<code>[Aメロ]</code> などの見出しと、<code>涙(なみだ)</code> のような読みがあると正確になります）</div>
         <textarea id="impLyrics" spellcheck="false" placeholder="[Aメロ]&#10;夜(よる)の向(む)こうへ&#10;君(きみ)と走(はし)り出(だ)す&#10;…"></textarea>
-        <div id="impCheck" class="small"></div>
+        <div class="row"><div id="impCheck" class="small" style="flex:1"></div><button id="impClear" title="歌詞を空にして、声だけから作ります">歌詞を空にする</button></div>
       </div>
       <div class="imp-right">
         <label class="imp-l">3. 設定</label>
-        <label>歌詞1行を <select id="impBars"><option value="1">1小節</option><option value="2" selected>2小節</option><option value="4">4小節</option></select> にする</label>
+        <label title="歌詞がないときは、ひと息で歌ったフレーズ1つが1行です">歌詞1行（1フレーズ）を <select id="impBars"><option value="1">1小節</option><option value="2" selected>2小節</option><option value="4">4小節</option></select> にする</label>
         <label>刻み <select id="impGrid"><option value="0.5" selected>8分音符</option><option value="0.25">16分音符</option></select></label>
         <label>高さ <select id="impOct"><option value="0" selected>歌ったまま</option><option value="1">1オクターブ上げる</option><option value="-1">1オクターブ下げる</option></select></label>
         <label><input id="impSnap" type="checkbox" checked> キーから外れた音を、キーの音に寄せる</label>
@@ -1687,7 +1699,10 @@ function renderGuide() {
   };
   const btn = (text, tip, fn) => Object.assign(smallButton(text, fn), { title: tip });
   step('load', true, btn('読み込む', '別の録音や歌詞で、読み込み直します', openImport));
-  step('sync', !!st.sync, Object.assign(btn('歌詞を合わせる', '歌っている所と歌詞がずれているときに。元の歌を聞きながら、各行の歌い出しで Space を押します', openSync), { disabled: !hasGuide }));
+  if (!song.importInfo.lyrics?.trim())
+    step('lyr', song.sections.some(x => (x.verses || []).some(v => v && v.trim())),
+      btn('歌詞を入れる', '元の歌を聞き取って、右の「歌詞」に入れます（歌ったフレーズ1つを1行に）。入れなくても曲にはなります', () => { setSideTab('lyrics'); $('#lyrics').focus(); }));
+  else step('sync', !!st.sync, Object.assign(btn('歌詞を合わせる', '歌っている所と歌詞がずれているときに。元の歌を聞きながら、各行の歌い出しで Space を押します', openSync), { disabled: !hasGuide }));
   step('rhy', rhyDone, btn(`リズムを整える ${cnt('rhy')}/${secs.length}`, 'セクションごとに、音の始まりと長さをそろえます。押すと、まだのセクションへ移ります', () => guideOpen('rhy', openRhythm)));
   step('fix', fixDone, btn(`音程を整える ${cnt('fix')}/${secs.length}`, 'セクションごとに、コードとぶつかる音・キーから外れた音を直します。押すと、まだのセクションへ移ります', () => guideOpen('fix', openFix)));
   if (hasGuide) step('listen', false, segControl('聴き比べる', [['song', 'できた曲'], ['guide', '元の歌'], ['both', '両方']], listenMode(), setListen));
@@ -1718,7 +1733,7 @@ function renderSettings() {
   $('#drums').checked = song.drums;
   $('#loop').checked = song.loop;
   $('#guideWrap').hidden = !(guide.buffer && guide.id === song.guideId);
-  $('#syncBtn').hidden = !(song.importInfo && guide.buffer && guide.id === song.guideId);
+  $('#syncBtn').hidden = !(song.importInfo?.lyrics?.trim() && guide.buffer && guide.id === song.guideId);
   $('#listen').value = listenMode();
   $('#adv').value = Math.round(song.adventure * 100);
   $('#defLen').value = song.defLen;
@@ -2937,11 +2952,39 @@ async function analyzeVoice(file, lyricsText, opts, progress, starts = null) {
   if (ph.length) phrases.push(ph);
 
   // ---- 3. 歌詞 → セクションと行 ----
-  const { title, blocks, lines } = importLines(lyricsText);
-  if (!lines.length) throw new Error('歌詞を入れてください。');
+  let { title, blocks, lines } = importLines(lyricsText);
+  const noLyrics = !lines.length;
+  if (noLyrics) {
+    // 歌詞なし：声の切れ目でフレーズにまとめ、それを1行として扱う（歌詞はあとから入れられる）。
+    // 短い切れ目（0.7秒未満）はつなげる。ただし1行が長くなりすぎないように（6秒まで）
+    const units = [];
+    for (const p of phrases) {
+      const u = units[units.length - 1];
+      if (u && p[0].t0 - u[u.length - 1].t1 < 0.7 && p[p.length - 1].t1 - u[0].t0 <= 6) u.push(...p);
+      else units.push([...p]);
+    }
+    // 1音だけの行（咳・相づちなど）は、近い行があればそちらへ入れ、なければ捨てる
+    const kept = [];
+    units.forEach((u, i) => {
+      if (u.length >= 2) { kept.push(u); return; }
+      const prev = kept[kept.length - 1];
+      if (prev && u[0].t0 - prev[prev.length - 1].t1 < 1.2) prev.push(...u);
+    });
+    if (!kept.length) throw new Error('歌のフレーズを見つけられませんでした。もう少し長く、はっきり歌った録音を使ってください。');
+    const PER = 4;                                          // 4行で1つのパート
+    blocks = [];
+    lines = kept.map((u, i) => {
+      const bi = Math.floor(i / PER);
+      if (!blocks[bi]) blocks[bi] = { tag: 'パート' + (bi + 1), lines: [] };
+      blocks[bi].lines.push('');
+      return { bi, tag: blocks[bi].tag, text: '', mora: u.length, notes: u.map(n => ({ ...n })) };
+    });
+  }
 
   // ---- 4. 行 ↔ フレーズの対応 ----
-  if (starts) {
+  if (noLyrics) {
+    // 行はフレーズから作ってある
+  } else if (starts) {
     // 人が合わせた歌い出しの時刻で区切る（少し手前から次の行の手前まで）
     lines.forEach((l, i) => {
       const a = starts[i] - 0.12, b = i + 1 < starts.length ? starts[i + 1] - 0.12 : Infinity;
@@ -3039,7 +3082,7 @@ async function analyzeVoice(file, lyricsText, opts, progress, starts = null) {
     ns.forEach((n, j) => { const nb = ns[j + 1]?.b ?? beatsPerLine; n.e = Math.min(n.e, nb, beatsPerLine); if (n.e <= n.b) n.e = n.b + grid / 2; });
     l.guide = { t0: ls, t1: le };
   });
-  return { lines, blocks, title, bpm, key: best, phrases: phrases.length, notes: N.length };
+  return { lines, blocks, title, bpm, key: best, phrases: phrases.length, notes: N.length, noLyrics };
 }
 
 // 解析結果から新しい曲を作る
@@ -3061,7 +3104,7 @@ function buildImportedSong(res, opts, fileName) {
       sg.sections.push(sec);
       byTag.set(b.tag, sec);
     }
-    sec.verses[verse] = b.lines.join('\n');
+    sec.verses[verse] = b.lines.some(t => t) ? b.lines.join('\n') : '';
     sg.arrangement.push(sec.id);
     if (verse > 0) return;                                  // メロディとガイドは1回目に歌った分を使う（2番以降は歌詞だけ）
     res.lines.filter(l => l.bi === bi).forEach((l, li) => {
@@ -3085,6 +3128,7 @@ function openImport() {
   const has = song.sections.some(s => (s.verses || []).some(v => v && v.trim()));
   if (!$('#impLyrics').value.trim() && has) $('#impLyrics').value = songLyricsText();
   $('#impMsg').textContent = '';
+  impRecRender();
   $('#impModal').hidden = false;
   renderImpCheck();
 }
@@ -3095,11 +3139,74 @@ function renderImpCheck() {
   const kanji = parseLyrics(lines.join('\n'), song.lyrExt).noReading;
   $('#impCheck').innerHTML = lines.length
     ? `歌詞 ${lines.length}行・${mora}音` + (kanji ? `　<span class="warn">読みのない漢字が${kanji}字あります。<code>涙(なみだ)</code> のように読みを付けると、歌と歌詞の対応が正確になります</span>` : '')
-    : '歌詞を貼り付けてください（<code>[Aメロ]</code> などの見出しがあるとセクションに分かれます）';
+    : '歌詞がなくても作れます：声の切れ目でフレーズに分けて曲にします。歌詞はあとから、聞き取って入れられます';
 }
+// ---- この画面で録音する（伴奏なし・自由なテンポで歌ってもらう） ----
+const impRec = { rec: null, stream: null, chunks: [], file: null, t0: 0, raf: 0, actx: null };
+function impRecRender() {
+  const on = !!impRec.rec;
+  const b = $('#impRec');
+  b.textContent = on ? '■ 録音を止める' : impRec.file ? '● 録り直す' : '● 録音する';
+  b.className = on ? 'rec-on' : '';
+  $('#impMeter').hidden = !on;
+  $('#impAudio').hidden = on || !impRec.file;
+  $('#impOr').hidden = $('#impFile').hidden = on || !!impRec.file;
+  if (!on) $('#impRecTime').textContent = impRec.file ? '録音できました（下で聞けます）' : '';
+}
+async function impRecStart() {
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { alert('このブラウザは録音に対応していません。Chrome で開いてください。'); return; }
+  try {
+    // 雑音除去は歌の伸ばす音を削ってしまうので切る
+    impRec.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } });
+  } catch (e) { alert('マイクを使えませんでした。ブラウザのマイクの許可を確かめてください。'); return; }
+  impRec.chunks = []; impRec.file = null;
+  const rec = impRec.rec = new MediaRecorder(impRec.stream);
+  rec.ondataavailable = e => { if (e.data.size) impRec.chunks.push(e.data); };
+  rec.onstop = () => {
+    const type = rec.mimeType || 'audio/webm';
+    const d = new Date(), z = n => String(n).padStart(2, '0');
+    if (!impRec.discard && impRec.chunks.length) {
+      impRec.file = new File(impRec.chunks, `新しい歌 ${d.getMonth() + 1}-${d.getDate()} ${z(d.getHours())}${z(d.getMinutes())}.${type.includes('mp4') ? 'm4a' : 'webm'}`, { type });
+      $('#impAudio').src = URL.createObjectURL(impRec.file);
+    }
+    impRec.discard = false;
+    impRec.rec = null;
+    impRecRender();
+  };
+  // 声の大きさ（マイクに声が入っているかを見せる）
+  const actx = impRec.actx = new AudioContext(), an = actx.createAnalyser();
+  an.fftSize = 1024;
+  actx.createMediaStreamSource(impRec.stream).connect(an);
+  const buf = new Float32Array(an.fftSize), bar = $('#impMeter i');
+  impRec.t0 = performance.now();
+  const tick = () => {
+    if (!impRec.rec) return;
+    an.getFloatTimeDomainData(buf);
+    let p = 0;
+    for (const v of buf) p = Math.max(p, Math.abs(v));
+    bar.style.width = Math.min(100, p * 140) + '%';
+    const sec = Math.floor((performance.now() - impRec.t0) / 1000);
+    $('#impRecTime').textContent = `録音中 ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+    impRec.raf = requestAnimationFrame(tick);
+  };
+  rec.start();
+  impRecRender();
+  tick();
+}
+function impRecStop(discard = false) {
+  if (!impRec.rec) return;
+  impRec.discard = discard;
+  impRec.rec.stop();
+  impRec.stream.getTracks().forEach(t => t.stop());
+  impRec.actx?.close();
+  cancelAnimationFrame(impRec.raf);
+}
+function closeImport() { impRecStop(true); $('#impAudio').pause(); $('#impModal').hidden = true; }
 async function runImport() {
-  const file = $('#impFile').files[0];
-  if (!file) { alert('ボイスメモ（音声ファイル）を選んでください。'); return; }
+  if (impRec.rec) { alert('録音を止めてから読み込んでください。'); return; }
+  const file = impRec.file || $('#impFile').files[0];
+  if (!file) { alert('録音するか、音声ファイルを選んでください。'); return; }
+  $('#impAudio').pause();
   const opts = { barsPerLine: +$('#impBars').value, grid: +$('#impGrid').value, octave: +$('#impOct').value, snapKey: $('#impSnap').checked };
   const btn = $('#impRun');
   btn.disabled = true;
@@ -3107,6 +3214,7 @@ async function runImport() {
   try {
     const msg = await importVoice(file, file.name, $('#impLyrics').value, opts, null, progress);
     progress(msg);
+    impRec.file = null; $('#impFile').value = ''; impRecRender();    // 次に開いたときは、新しい録音から
     setTimeout(() => { $('#impModal').hidden = true; }, 1800);
     setSideTab('lyrics');
   } catch (e) {
@@ -3148,7 +3256,9 @@ async function importVoice(file, name, lyricsText, opts, starts, progress) {
     ui.sel = -1; ui.note = -1; ui.verse = 0; ui.rollCentered = null;
     hist.stack.push(JSON.stringify(prevSong)); hist.i = hist.stack.length - 1; // 読み込む前の曲に ↶ で戻れるように
     changed();
-    return `できました：${kname}・BPM ${song.bpm}・${song.sections.length}セクション・歌詞${res.lines.length}行のうち${matched}行を歌と対応づけ`;
+    return res.noLyrics
+      ? `できました：${kname}・BPM ${song.bpm}・歌を${res.lines.length}フレーズ（${song.sections.length}パート）に分けました`
+      : `できました：${kname}・BPM ${song.bpm}・${song.sections.length}セクション・歌詞${res.lines.length}行のうち${matched}行を歌と対応づけ`;
   }
 }
 
@@ -3156,6 +3266,7 @@ async function importVoice(file, name, lyricsText, opts, starts, progress) {
 const sync = { lines: [], taps: [], src: null, t0: 0, timer: 0 };
 function openSync() {
   if (!(song.importInfo && guide.buffer && guide.id === song.guideId)) { alert('ボイスメモを読み込んだ曲で使えます。'); return; }
+  if (!song.importInfo.lyrics?.trim()) { alert('歌詞を入れて読み込んだ曲で使えます。'); return; }
   stop();
   sync.lines = importLines(song.importInfo.lyrics).lines;
   sync.taps = [];
@@ -3248,6 +3359,8 @@ function lineSpans(sec) {
     return lines.map((l, i) => ({ s: g[i].beat, e: i + 1 < g.length ? g[i + 1].beat : total, mora: l.mora.length }));
   if (lines.length && total % lines.length === 0)
     return lines.map((l, i) => ({ s: i * total / lines.length, e: (i + 1) * total / lines.length, mora: l.mora.length }));
+  if (!lines.length && g.length)                            // 歌詞なし：歌ったフレーズの区切りで（音の数は変えない）
+    return g.map((x, i) => ({ s: x.beat, e: i + 1 < g.length ? g[i + 1].beat : total, mora: null }));
   return [{ s: 0, e: total, mora: lines.reduce((a, l) => a + l.mora.length, 0) || null }];
 }
 function rhythmFix(sec, level) {
@@ -3269,7 +3382,9 @@ function rhythmFix(sec, level) {
       if (t <= prev) t = prev + 0.5 < sp.e ? prev + 0.5 : prev + 0.25;
       n.t = t; prev = t;
     }
-    ns = ns.filter(n => n.t < sp.e);
+    // 音が詰まっていて行の終わりからはみ出す分は、後ろから16分音符で詰めて行の中に収める
+    for (let k = ns.length - 1, lim = sp.e - 0.25; k >= 0 && ns[k].t > lim; k--, lim -= 0.25) ns[k].t = Math.max(sp.s, lim);
+    ns = ns.filter((n, k) => n.t < sp.e && (!k || n.t > ns[k - 1].t));
     // 長さ：次の音まで（1拍以内の隙間は埋める。しっかりでは全部つなげる）。行の最後の音は、しっかりでは行の終わりの半拍前まで（最大1小節）
     const lengths = () => ns.forEach((n, k) => {
       const nx = ns[k + 1];
@@ -3925,7 +4040,9 @@ $('#voiceBtn').onclick = openImport;
 $('#exportAudio').onclick = () => { closeMenu(); exportAudio(); };
 $('#lyricCard').onclick = () => { closeMenu(); openLyricCard(); };
 $('#scoreBtn').onclick = () => { closeMenu(); openScore(); };
-$('#impCancel').onclick = () => { $('#impModal').hidden = true; };
+$('#impCancel').onclick = closeImport;
+$('#impClear').onclick = () => { $('#impLyrics').value = ''; renderImpCheck(); };
+$('#impRec').onclick = () => { impRec.rec ? impRecStop() : impRecStart(); };
 $('#impRun').onclick = runImport;
 $('#impLyrics').oninput = renderImpCheck;
 $('#harmBtn').onclick = () => {
@@ -4009,7 +4126,7 @@ document.addEventListener('click', e => { if (e.target.closest('button')) e.targ
 
 window.addEventListener('keydown', e => {
   if (!$('#lyrModal').hidden) { if (e.key === 'Escape') closeSongLyrics(); return; }
-  if (!$('#impModal').hidden) { if (e.key === 'Escape') $('#impModal').hidden = true; return; }
+  if (!$('#impModal').hidden) { if (e.key === 'Escape') closeImport(); return; }
   if (!$('#syncModal').hidden) {
     if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) syncTap(); }
     else if (e.key === 'Backspace') { e.preventDefault(); sync.taps.pop(); renderSync(); }
