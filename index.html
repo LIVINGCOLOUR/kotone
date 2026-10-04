@@ -1678,6 +1678,7 @@ function changed() { save(); snapshot(); render(); }
 
 // ---- 歌から作る：手順の案内（ボイスメモから作った曲のときに、次に何をするかを並べる） ----
 // 済みの印：セクションごとの sec.done.rhy（リズム）・sec.done.fix（音程）、曲の song.steps.sync（歌詞の位置）・song.steps.out（書き出し）
+const toolSecs = () => song.sections.filter(x => x.melody.length && x.chords.length);   // 整える対象：メロディとコードがあるパート
 function markDone(sec, k) { sec.done = { ...(sec.done || {}), [k]: true }; }
 function markStep(k) { song.steps = { ...(song.steps || {}), [k]: true }; }
 // 今選んでいるセクションで、その道具を開く（済んでいても、勝手にほかのセクションへは移らない）。
@@ -1720,8 +1721,8 @@ function renderGuide() {
     step('lyr', song.sections.some(x => (x.verses || []).some(v => v && v.trim())),
       btn('歌詞を入れる', '元の歌を聞き取って、右の「歌詞」に入れます（歌ったフレーズ1つを1行に）。入れなくても曲にはなります', () => { setSideTab('lyrics'); $('#lyrics').focus(); }));
   else step('sync', !!st.sync, Object.assign(btn('歌詞を合わせる', '歌っている所と歌詞がずれているときに。元の歌を聞きながら、各行の歌い出しで Space を押します', openSync), { disabled: !hasGuide }));
-  step('rhy', rhyDone, btn(`リズムを整える ${cnt('rhy')}/${secs.length}`, '今選んでいるセクションの、音の始まりと長さをそろえます。セクションごとに行います（数字は、済んだセクションの数）', () => guideOpen('rhy', openRhythm)));
-  step('fix', fixDone, btn(`音程を整える ${cnt('fix')}/${secs.length}`, '今選んでいるセクションの、コードとぶつかる音・キーから外れた音を直します。セクションごとに行います（数字は、済んだセクションの数）', () => guideOpen('fix', openFix)));
+  step('rhy', rhyDone, btn(`リズムを整える ${cnt('rhy')}/${secs.length}`, '音の始まりと長さをそろえます。今のパートで整えた後を見てから、曲全体にまとめて適用できます（数字は、済んだパートの数）', () => guideOpen('rhy', openRhythm)));
+  step('fix', fixDone, btn(`音程を整える ${cnt('fix')}/${secs.length}`, 'コードとぶつかる音・キーから外れた音を直します。今のパートで直した後を見てから、曲全体にまとめて適用できます（数字は、済んだパートの数）', () => guideOpen('fix', openFix)));
   if (hasGuide) step('listen', false, segControl('聴き比べる', [['song', 'できた曲'], ['guide', '元の歌'], ['both', '両方']], listenMode(), setListen));
   step('out', !!st.out,
     btn('MP3', '曲全体を音声（MP3）で書き出します', exportAudio),
@@ -1908,10 +1909,12 @@ function renderInspector() {
     box.append(lab,
       segControl('強さ', [[1, '少し'], [2, 'しっかり']], ui.rhy.level, v => { ui.rhy.level = v; updateRhythm(); }),
       hint((ui.rhy.level === 1 ? '音の始まりを8分音符にそろえ、短い隙間を埋めます' : '歌詞1行ごとに、音符の数を歌詞に合わせて形を整えます')
-        + ` ／ 緑が整えた後（歌う音 ${before}→${after}${mora ? `・歌詞 ${mora}音` : ''}）。適用後も ↶ で戻せます`),
+        + ` ／ 緑が整えた後（このパートの歌う音 ${before}→${after}${mora ? `・歌詞 ${mora}音` : ''}）。適用後も ↶ で戻せます`),
       Object.assign(document.createElement('div'), { className: 'spacer' }));
-    const ok = smallButton('適用', applyRhythm); ok.className = 'primary';
-    box.append(ok, smallButton('やめる', () => { ui.rhy = null; render(); }));
+    const ok = smallButton('曲全体に適用', () => applyRhythm(true)); ok.className = 'primary';
+    ok.title = 'メロディのあるパート全部を、この強さで整えます';
+    box.append(ok, Object.assign(smallButton('このパートだけ', () => applyRhythm(false)), { title: '今見ているパートだけを整えます' }),
+      smallButton('やめる', () => { ui.rhy = null; render(); }));
     return;
   }
   if (ui.fix) {
@@ -1922,10 +1925,13 @@ function renderInspector() {
     lab.textContent = '理論チェック';
     box.append(lab,
       segControl('強さ', [[1, '弱'], [2, '中'], [3, '強']], ui.fix.level, v => { ui.fix.level = v; ui.fix.skip = new Set(); updateFix(); }),
-      hint(L.length ? `${use.length}音を直します（${Object.entries(by).map(([k, v]) => k + v).join('・')}）／ 緑が直した後。クリックで1音ずつ外せます` : '直す所はありません'),
+      hint((L.length ? `このパートは${use.length}音を直します（${Object.entries(by).map(([k, v]) => k + v).join('・')}）／ 緑が直した後。クリックで1音ずつ外せます` : 'このパートに直す所はありません')
+        + ` ／ 曲全体では${ui.fix.all}音`),
       Object.assign(document.createElement('div'), { className: 'spacer' }));
-    const ok = smallButton('適用', applyFix); ok.className = 'primary'; ok.disabled = !use.length;
-    box.append(ok, smallButton('やめる', () => { ui.fix = null; render(); }));
+    const ok = smallButton('曲全体に適用', () => applyFix(true)); ok.className = 'primary'; ok.disabled = !ui.fix.all;
+    ok.title = 'メロディのあるパート全部を、この強さで直します（このパートで外した音は直しません）';
+    box.append(ok, Object.assign(smallButton('このパートだけ', () => applyFix(false)), { disabled: !use.length, title: '今見ているパートだけを直します' }),
+      smallButton('やめる', () => { ui.fix = null; render(); }));
     return;
   }
   if (c) {
@@ -3407,14 +3413,19 @@ function openFix() {
 function updateFix() {
   const sec = curSec();
   ui.fix.list = theoryFixes(sec, ui.fix.level);
+  ui.fix.all = toolSecs().reduce((a, x) => a + theoryFixes(x, ui.fix.level).length, 0);   // 曲全体で直す音の数
   ui.fix.skip = new Set([...ui.fix.skip].filter(i => ui.fix.list.some(f => f.i === i)));
-  if (!ui.fix.list.length && !sec.done?.fix) { markDone(sec, 'fix'); save(); }   // 直す所がなければ、確かめた時点で済み
+  if (!ui.fix.all) { toolSecs().forEach(x => markDone(x, 'fix')); save(); }      // 直す所がなければ、確かめた時点で済み
+  else if (!ui.fix.list.length && !sec.done?.fix) { markDone(sec, 'fix'); save(); }
   render();
 }
-function applyFix() {
-  const sec = curSec();
-  for (const f of ui.fix.list) if (!ui.fix.skip.has(f.i)) sec.melody[f.i].m = f.to;
-  markDone(sec, 'fix');
+// all：メロディのあるパート全部を、同じ強さで直す（今のパートで外した音は直さない）
+function applyFix(all) {
+  const cur = curSec();
+  for (const sec of all ? toolSecs() : [cur]) {
+    for (const f of sec === cur ? ui.fix.list : theoryFixes(sec, ui.fix.level)) if (sec !== cur || !ui.fix.skip.has(f.i)) sec.melody[f.i].m = f.to;
+    markDone(sec, 'fix');
+  }
   ui.fix = null;
   changed();
 }
@@ -3513,9 +3524,12 @@ function updateRhythm() {
   ui.rhy.mel = rhythmFix(curSec(), ui.rhy.level);
   render();
 }
-function applyRhythm() {
-  curSec().melody = ui.rhy.mel;
-  markDone(curSec(), 'rhy');
+// all：メロディのあるパート全部を、同じ強さで整える
+function applyRhythm(all) {
+  for (const sec of all ? toolSecs() : [curSec()]) {
+    sec.melody = sec === curSec() ? ui.rhy.mel : rhythmFix(sec, ui.rhy.level);
+    markDone(sec, 'rhy');
+  }
   ui.rhy = null;
   changed();
 }
