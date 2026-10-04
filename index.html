@@ -2962,6 +2962,160 @@ function importLines(lyricsText) {
   return { title, blocks, lines };
 }
 
+// ================= 音の高さの補正 =================
+// 歌った高さ（小数の MIDI ノート番号 n.m）を半音（n.p）に直し、曲のキーを決める。lines は [{notes: [{t0, t1, m}]}]
+// 方式  v1：行ごとに半音未満のずれを1つの値で直して丸める
+//       v2：縮んだ音程の幅を広げ、基準の高さを音ごとに追い、上がり下がりの形（輪郭）を守りながら音階の音に寄せる
+//           （根拠は docs/correction-research.md）
+const PITCH_METHOD = 'v2';
+const KEY_MAJ = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88], KEY_MIN = [6.33, 2.68, 3.52, 5.38, 2.6, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+const medOf = a => { const s = [...a].sort((p, q) => p - q); return s[s.length >> 1]; };
+// キー：12音の分布（音の長さで重み付け）を、長調・短調の典型と比べる
+function keyFromHist(hist) {
+  const corr = (a, b) => { const ma = a.reduce((s, v) => s + v, 0) / 12, mb = b.reduce((s, v) => s + v, 0) / 12; let n = 0, da = 0, db = 0; for (let i = 0; i < 12; i++) { n += (a[i] - ma) * (b[i] - mb); da += (a[i] - ma) ** 2; db += (b[i] - mb) ** 2; } return n / Math.sqrt(da * db || 1); };
+  let best = { r: -2 };
+  for (let k = 0; k < 12; k++) for (const [mode, prof] of [['major', KEY_MAJ], ['minor', KEY_MIN]]) {
+    const r = corr(hist, prof.map((_, i) => prof[(i - k + 12) % 12]));
+    if (r > best.r) best = { r, k, mode };
+  }
+  return best;
+}
+// キー（長調・短調とも）の音階の12音の集合
+const scaleOfKey = key => new Set([0, 2, 4, 5, 7, 9, 11].map(x => (key.k + (key.mode === 'minor' ? 3 : 0) + x) % 12));
+// キーから外れた音を、近い音階の音へ（上を先に試す）
+const snapNoteToScale = (m, scale) => scale.has(((m % 12) + 12) % 12) ? m : m + [1, -1, 2, -2].find(d => scale.has(((m + d) % 12 + 12) % 12));
+function pitchStage(lines, opts) {
+  const method = opts.pitch || PITCH_METHOD;
+  // 前後よりずっと低い（高い）のは、声の高さを1オクターブ取り違えたもの
+  for (const l of lines) {
+    const center = medOf(l.notes.map(n => n.m));
+    for (const n of l.notes) { while (n.m < center - 8) n.m += 12; while (n.m > center + 8) n.m -= 12; }
+  }
+  const key = method === 'v2' ? pitchV2(lines, opts) : pitchV1(lines);
+  for (const l of lines) for (const n of l.notes) n.p += 12 * (opts.octave || 0);
+  return key;
+}
+function pitchV1(lines) {
+  for (const l of lines) {
+    let sx = 0, sy = 0;
+    for (const n of l.notes) { const w = n.t1 - n.t0, a = (n.m - Math.round(n.m)) * 2 * Math.PI; sx += w * Math.cos(a); sy += w * Math.sin(a); }
+    const offc = Math.atan2(sy, sx) / (2 * Math.PI);
+    for (const n of l.notes) n.p = Math.round(n.m - offc);
+  }
+  const hist = new Array(12).fill(0);
+  for (const l of lines) for (const n of l.notes) hist[((n.p % 12) + 12) % 12] += n.t1 - n.t0;
+  return keyFromHist(hist);
+}
+function pitchV2(lines, opts) {
+  const P = { kMax: 1.5, kPrior: 0.12, kMargin: 0.06, sig: 0.3, drift: 1.0, majBias: 0.1, minorMin: 0.3, contour: 1.0, same: 0.5, size: 0.15, ...(opts.v2 || {}) };
+  const seq = lines.flatMap((l, li) => l.notes.map((n, j) => ({ n, li, first: j === 0 })));
+  if (!seq.length) return { r: 0, k: 0, mode: 'major' };
+  // 重み：長い音ほど正確なので重く、フレーズの最初の音は低くなりやすいので軽く見る
+  const wt = seq.map(q => Math.min(1.5, Math.max(0.1, q.n.t1 - q.n.t0)) * (q.first ? 0.6 : 1));
+  const center = medOf(seq.map(q => q.n.m));
+  // 24のキーの「音の出やすさ」の型（平均0・ばらつき1にそろえる）
+  const profs = [];
+  for (const [mode, prof] of [['major', KEY_MAJ], ['minor', KEY_MIN]]) {
+    const mu = prof.reduce((a, v) => a + v, 0) / 12, sd = Math.sqrt(prof.reduce((a, v) => a + (v - mu) ** 2, 0) / 12);
+    for (let k = 0; k < 12; k++) profs.push({ k, mode, z: prof.map((_, i) => (prof[(i - k + 12) % 12] - mu) / sd) });
+  }
+  // 高さの並び ys（重み ws）が、いちばんよく乗るキーと、その合い具合。高さは12音へ、近さに応じてなだらかに振り分ける
+  const KERN = [-2, -1, 0, 1, 2];
+  const fitKey = (ys, ws) => {
+    const h = new Array(12).fill(0);
+    let tot = 0;
+    ys.forEach((v, i) => {
+      const r = Math.round(v);
+      for (const d of KERN) h[(((r + d) % 12) + 12) % 12] += ws[i] * Math.exp(-((v - r - d) ** 2) / (2 * P.sig * P.sig));
+      tot += ws[i];
+    });
+    let best = { r: -Infinity };
+    const sc = profs.map(pf => { let v = 0; for (let i = 0; i < 12; i++) v += h[i] * pf.z[i]; return v / (tot || 1); });
+    const b = sc.indexOf(Math.max(...sc)), bm = sc.indexOf(Math.max(...sc.slice(0, 12)));
+    // 短調は、はっきり合うときだけ。手がかりが弱いとき（半音のどこにも寄っていない歌）は、いちばん合う長調にする。
+    // 同じ音階の長調（平行調）が近いくらい合うときも長調にする（歌の多くは長調で、短調にすると伴奏が暗くなるため）
+    if (b >= 12 && sc[b] < P.minorMin) return { r: sc[bm], k: bm, mode: 'major' };
+    if (b >= 12 && sc[(profs[b].k + 3) % 12] >= sc[b] - P.majBias) return { r: sc[b], k: (profs[b].k + 3) % 12, mode: 'major' };
+    return { r: sc[b], k: profs[b].k, mode: profs[b].mode };
+  };
+  // 1. 音程の幅を広げる倍率 k・全体の高さのずれ o・キーを、同時に探す（音階にいちばんよく乗る組み合わせ）
+  const OFFS = [];
+  for (let o = -0.5; o < 0.5 - 1e-9; o += 0.1) OFFS.push(o);
+  const search = k => {
+    let best = { r: -Infinity };
+    for (const o of OFFS) { const f = fitKey(seq.map(q => center + k * (q.n.m - center) - o), wt); if (f.r > best.r) best = { ...f, o }; }
+    return best;
+  };
+  let k = 1, g = search(1);
+  if (P.kMax > 1) {
+    const base = g.r;
+    let bestS = base;
+    for (let c = 1.02; c <= P.kMax + 1e-9; c += 0.02) {
+      const f = search(c), sc = f.r - P.kPrior * (c - 1);
+      if (sc > bestS && f.r > base + P.kMargin) { bestS = sc; k = c; g = f; }   // はっきり良くなるときだけ広げる
+    }
+  }
+  const key = { r: g.r, k: g.k, mode: g.mode };
+  const x = seq.map(q => center + k * (q.n.m - center));
+  // 2. 基準の高さの流れ：行ごとのずれを、キーの音階によく乗り、かつ前の行から大きく動かないように選ぶ
+  const scaleK = scaleOfKey(key);
+  const tones = [];
+  for (let m = 0; m < 128; m++) if (scaleK.has(m % 12)) tones.push(m);
+  const near = v => { let b = Infinity; for (const t of tones) { const d = Math.abs(t - v); if (d < b) b = d; else if (t > v) break; } return b; };
+  const LO = [];
+  for (let o = g.o - 1.5; o <= g.o + 1.5 + 1e-9; o += 0.1) LO.push(o);
+  const idxOf = lines.map(() => []);
+  seq.forEach((q, i) => idxOf[q.li].push(i));
+  const lineCost = (li, o) => idxOf[li].reduce((a, i) => a + wt[i] * (1 - Math.exp(-(near(x[i] - o) ** 2) / (2 * P.sig * P.sig))), 0);
+  let cst = LO.map(o => lineCost(0, o) + 0.5 * P.drift * Math.abs(o - g.o));
+  const bk = [];
+  for (let li = 1; li < lines.length; li++) {
+    const nb = [], nc = LO.map(o => {
+      let best = Infinity, arg = 0;
+      LO.forEach((p, j) => { const v = cst[j] + P.drift * Math.abs(o - p); if (v < best) { best = v; arg = j; } });
+      nb.push(arg);
+      return best + lineCost(li, o) + 0.1 * P.drift * Math.abs(o - g.o);
+    });
+    bk.push(nb); cst = nc;
+  }
+  const offs = new Array(lines.length);
+  let jj = cst.indexOf(Math.min(...cst));
+  for (let li = lines.length - 1; li >= 0; li--) { offs[li] = LO[jj]; if (li) jj = bk[li - 1][jj]; }
+  const y = x.map((v, i) => v - (P.ref === 'none' ? 0 : P.ref === 'global' ? g.o : offs[seq[i].li]));
+  if (opts.capture) opts.capture({ k, o: g.o, offs: offs.map(v => +v.toFixed(1)) });
+  const scale = opts.snapKey ? scaleK : null;
+  // 4. 半音への割り当て：候補（音階の音）の並びのうち、歌った高さに近く、上がり下がりの形と幅が保たれるものを選ぶ
+  const cands = y.map(v => {
+    const c = [];
+    for (let m = Math.round(v) - 2; m <= Math.round(v) + 2; m++) if (!scale || scale.has(((m % 12) + 12) % 12)) c.push(m);
+    return c.length ? c : [Math.round(v)];
+  });
+  const unary = (i, m) => (m - y[i]) ** 2 * (0.5 + Math.min(1, seq[i].n.t1 - seq[i].n.t0));
+  const pair = (i, a, b) => {                               // a：前の音の候補、b：この音の候補
+    if (seq[i].li !== seq[i - 1].li) return 0;              // 行をまたぐ所は縛らない
+    const dy = y[i] - y[i - 1], ds = b - a;
+    let c = P.size * (ds - dy) ** 2;
+    if (Math.abs(dy) < 0.35) c += P.same * Math.abs(ds);    // ほぼ同じ高さで歌った所は、同じ音に
+    else if (Math.sign(ds) !== Math.sign(dy)) c += P.contour * (ds === 0 && Math.abs(dy) < 0.6 ? 0.3 : 1);
+    return c;
+  };
+  let cost = cands[0].map(m => unary(0, m));
+  const back = [];
+  for (let i = 1; i < y.length; i++) {
+    const nb = [], nc = cands[i].map(b => {
+      let best = Infinity, arg = 0;
+      cands[i - 1].forEach((a, j) => { const v = cost[j] + pair(i, a, b); if (v < best) { best = v; arg = j; } });
+      nb.push(arg);
+      return best + unary(i, b);
+    });
+    back.push(nb); cost = nc;
+  }
+  let j = cost.indexOf(Math.min(...cost));
+  for (let i = y.length - 1; i >= 0; i--) { seq[i].n.p = cands[i][j]; if (i) j = back[i - 1][j]; }
+  key.expand = k;
+  return key;
+}
+
 // starts を渡すと、行の歌い出しの時刻（秒）としてそのまま使う（タイミング合わせの結果）。渡さなければ自動で対応づける
 async function analyzeVoice(file, lyricsText, opts, progress, starts = null) {
   audio();
@@ -3093,29 +3247,8 @@ async function analyzeVoice(file, lyricsText, opts, progress, starts = null) {
   }
   }
 
-  // ---- 5. 音の高さ：行ごとの音程のずれ（半音未満）を補正 → オクターブの取り違えを直す ----
-  for (const l of lines) {
-    let sx = 0, sy = 0;
-    for (const n of l.notes) { const w = n.t1 - n.t0, a = (n.m - Math.round(n.m)) * 2 * Math.PI; sx += w * Math.cos(a); sy += w * Math.sin(a); }
-    const offc = Math.atan2(sy, sx) / (2 * Math.PI);
-    const center = med(l.notes.map(n => n.m));
-    for (const n of l.notes) {
-      let m = n.m - offc;
-      while (m < center - 8) m += 12;   // 前後よりずっと低い（高い）のは、声の高さを1オクターブ取り違えたもの
-      while (m > center + 8) m -= 12;
-      n.p = Math.round(m) + 12 * opts.octave;
-    }
-  }
-  // キー（曲全体）：音の長さで重みを付けた12音の分布を、長調・短調の典型と比べる
-  const MAJ = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88], MIN = [6.33, 2.68, 3.52, 5.38, 2.6, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
-  const corr = (a, b) => { const ma = a.reduce((s, v) => s + v, 0) / 12, mb = b.reduce((s, v) => s + v, 0) / 12; let n = 0, da = 0, db = 0; for (let i = 0; i < 12; i++) { n += (a[i] - ma) * (b[i] - mb); da += (a[i] - ma) ** 2; db += (b[i] - mb) ** 2; } return n / Math.sqrt(da * db || 1); };
-  const hist = new Array(12).fill(0);
-  for (const l of lines) for (const n of l.notes) hist[((n.p % 12) + 12) % 12] += n.t1 - n.t0;
-  let best = { r: -2 };
-  for (let k = 0; k < 12; k++) for (const [mode, prof] of [['major', MAJ], ['minor', MIN]]) {
-    const r = corr(hist, prof.map((_, i) => prof[(i - k + 12) % 12]));
-    if (r > best.r) best = { r, k, mode };
-  }
+  // ---- 5. 音の高さ：半音に丸め、キーを決める ----
+  const best = pitchStage(lines, opts);
 
   // ---- 6. 歌詞の音の数に合わせる（足りなければ長い音を分け、多ければ「のばし」に）と、拍へのあてはめ ----
   const bpl = opts.barsPerLine, beatsPerLine = bpl * 4, grid = opts.grid;
@@ -3318,7 +3451,7 @@ async function importVoice(file, name, lyricsText, opts, starts, progress) {
     for (const sec of song.sections) {
       if (opts.snapKey) {
         const scale = new Set([0, 2, 4, 5, 7, 9, 11].map(x => (secKey(sec).pc + x) % 12));
-        for (const n of sec.melody) if (!scale.has(n.m % 12)) n.m += [1, -1, 2, -2].find(d => scale.has(((n.m + d) % 12 + 12) % 12));
+        for (const n of sec.melody) n.m = snapNoteToScale(n.m, scale);
       }
       harmonize(sec, Math.max(1, sec.bars || Math.ceil(Math.max(0, ...sec.melody.map(n => n.t + n.d)) / 4)));
       delete sec.bars;
