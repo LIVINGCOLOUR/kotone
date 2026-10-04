@@ -31,7 +31,8 @@
     font-family: "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif; }
 
   /* 画面の高さいっぱいに「操作バー → 作業エリア → 鍵盤」を並べ、ページ自体はスクロールしない */
-  .app { height: 100vh; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; }
+  .app { height: 100vh; display: flex; flex-direction: column; }
+  .app > * { flex: none; }
   .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 7px 16px;
     background: var(--panel); border-bottom: 1px solid var(--border); }
   .brand { font-size: 15px; font-weight: 800; letter-spacing: .06em; color: var(--accent); padding-right: 10px; border-right: 1px solid var(--border); }
@@ -59,6 +60,19 @@
   @keyframes blink { 50% { opacity: .6; } }
   .small { font-size: 12px; color: var(--muted); }
 
+  .voice-btn { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  /* 歌から作る：手順の案内 */
+  .vguide { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; padding: 8px 16px; background: var(--panel);
+    border-bottom: 1px solid var(--border); font-size: 13px; }
+  .vguide > b { color: var(--accent); margin-right: 4px; }
+  .vguide .step { display: flex; align-items: center; gap: 6px; }
+  .vguide .step + .step::before { content: '›'; color: var(--muted); margin-right: 2px; }
+  .vguide .num { width: 18px; height: 18px; border-radius: 50%; background: var(--chip); border: 1px solid var(--border); color: var(--muted);
+    font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+  .vguide .done .num { background: #1f9d55; border-color: #1f9d55; color: #fff; }
+  .vguide .next button { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .vguide .seg button { padding: 4px 9px; }
+
   .menu { position: relative; }
   .menu summary { list-style: none; cursor: pointer; font-size: 13px; padding: 5px 10px; border-radius: 7px;
     border: 1px solid var(--border); background: var(--chip); }
@@ -81,7 +95,7 @@
   .chip button { padding: 0 5px; border: none; background: transparent; color: var(--muted); font-size: 11px; }
   .arrow { color: var(--muted); font-size: 11px; }
 
-  .work { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 10px; padding: 10px 16px; min-height: 0; }
+  .work { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 10px; padding: 10px 16px; min-height: 0; flex: 1 1 0; }
   .editor, .side { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; min-height: 0;
     display: flex; flex-direction: column; padding: 10px 12px; }
   .famous { font-size: 12px; color: var(--accent); max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -146,6 +160,19 @@
   .modal-box { width: min(1100px, calc(100vw - 32px)); height: min(780px, calc(100vh - 32px)); background: var(--panel);
     border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column;
     box-shadow: 0 20px 60px rgba(0, 0, 0, .3); }
+  .sync-box { height: auto; }
+  .sync-now { padding: 28px 10px; text-align: center; display: grid; gap: 10px; }
+  .sync-cur { font-size: 30px; font-weight: 800; color: var(--text); min-height: 44px; }
+  .sync-side { font-size: 15px; color: var(--muted); min-height: 22px; }
+  .sync-tag { font-size: 12px; font-weight: 700; color: #fff; background: var(--accent); border-radius: 6px; padding: 2px 8px; margin-right: 10px; vertical-align: 4px; }
+  .sync-done { color: #1f9d55; }
+  .imp-box { height: min(640px, calc(100vh - 32px)); }
+  .imp-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; margin: 10px 0; }
+  .imp-left, .imp-right { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+  .imp-l { font-weight: 700; color: var(--text); }
+  #impLyrics { flex: 1; min-height: 0; resize: none; font: inherit; font-size: 14px; line-height: 1.7; padding: 8px 10px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+  #impCheck .warn { color: var(--warn); }
   .modal-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 12px; margin: 10px 0; }
   #songLyrics { resize: none; font: inherit; font-size: 14px; line-height: 1.8; padding: 10px 12px; border-radius: 8px;
     border: 1px solid var(--border); background: var(--bg); color: var(--text); min-height: 0; }
@@ -262,6 +289,9 @@
     </label>
     <label><input id="drums" type="checkbox"> ドラム</label>
     <label><input id="loop" type="checkbox"> ループ</label>
+    <label id="guideWrap" title="読み込んだ元の歌と、できた曲を聴き比べます（元の歌は、行ごとに曲の位置に合わせて鳴ります）" hidden><span class="lbl">聴く</span>
+      <select id="listen"><option value="song">できた曲</option><option value="guide">元の歌</option><option value="both">両方</option></select>
+    </label>
     <span class="sep"></span>
     <button id="playSec" class="primary">▶ 再生</button>
     <button id="playSong">▶ 曲全体</button>
@@ -283,18 +313,25 @@
     <div class="row" id="arrange"></div>
     <select id="addArr"></select>
     <div class="spacer"></div>
+    <button id="voiceBtn" class="voice-btn" title="歌詞を見ながら自由に歌った録音から、メロディとコードを作ります">🎤 歌から作る…</button>
     <details class="menu" id="fileMenu">
       <summary>ファイル ▾</summary>
       <div class="menu-body">
         <button id="midi">MIDI書き出し</button>
+        <button id="exportAudio">音声（MP3）を書き出す</button>
+        <button id="lyricCard">歌詞カードを作る（印刷・PDF）</button>
+        <button id="scoreBtn">ピアノ譜を作る（印刷・PDF）</button>
         <button id="copyText">コード譜をコピー</button>
         <button id="saveJson">ファイルに保存</button>
         <button id="loadJson">ファイルを開く</button>
+        <button id="importVoice">ボイスメモを読み込む…</button>
         <button id="newSong">新規</button>
       </div>
     </details>
     <a class="manual-link" href="manual.html" target="_blank">使い方 ↗</a>
   </div>
+
+  <div class="vguide" id="vguide" hidden></div>
 
   <main class="work">
     <section class="editor">
@@ -311,8 +348,16 @@
         </label>
         <button id="undoBtn" title="元に戻す（Cmd/Ctrl+Z）">↶</button>
         <button id="redoBtn" title="やり直す（Shift+Cmd/Ctrl+Z）">↷</button>
-        <button id="fancy">おしゃれ化</button>
-        <button id="clear">クリア</button>
+        <details class="menu" id="toolMenu">
+          <summary title="このセクションのメロディとコードを整えます">整える ▾</summary>
+          <div class="menu-body">
+            <button id="rhyBtn" title="歌って作ったメロディの、音の始まりと長さをそろえます（歌詞の音の数に合わせることもできます）">リズムを整える</button>
+            <button id="fixBtn" title="コードとぶつかる音・キーから外れた音を見つけて、まとめて直します">音程を整える（理論チェック）</button>
+            <button id="harmBtn" title="このセクションのメロディに合うコードを、1小節ずつ付け直します">コードを付ける</button>
+            <button id="fancy" title="コードを 7th などに変えて、響きをおしゃれにします">コードをおしゃれにする</button>
+            <button id="clear" title="このセクションのコードとメロディを消します（↶ で戻せます）">クリア</button>
+          </div>
+        </details>
       </div>
       <div class="lane">
         <div class="gutter">
@@ -348,6 +393,7 @@
       </div>
       <div class="panel" id="panelLyrics" hidden>
         <button id="songLyrBtn" class="wide">曲全体の歌詞を貼り付け・編集…</button>
+        <button id="syncBtn" class="wide" hidden>歌と歌詞のタイミングを合わせる…</button>
         <div class="row lyr-head">
           <h2 id="lyrTitle">歌詞</h2>
           <div class="seg" id="verseSeg"></div>
@@ -402,6 +448,54 @@
       <div class="spacer"></div>
       <button id="lyrCancel">キャンセル</button>
       <button id="lyrApply" class="primary">反映する</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="impModal" hidden>
+  <div class="modal-box imp-box" role="dialog" aria-label="ボイスメモを読み込む">
+    <div class="row"><h2 style="color:var(--text);font-size:16px">歌から作る（ボイスメモを読み込む）</h2>
+      <span class="small">歌の録音から声の高さを読み取り、歌詞の行と合わせて、メロディとコードを作ります（今の曲は置き換わります。↶ で戻せます）</span></div>
+    <div class="imp-body">
+      <div class="imp-left">
+        <label class="imp-l">1. 音声ファイル（m4a・mp3・wav など。声だけの録音がおすすめ）</label>
+        <input id="impFile" type="file" accept="audio/*,.m4a,.mp3,.wav,.aac">
+        <label class="imp-l">2. 歌った歌詞（歌った順。<code>[Aメロ]</code> などの見出しと、<code>涙(なみだ)</code> のような読みがあると正確になります）</label>
+        <textarea id="impLyrics" spellcheck="false" placeholder="[Aメロ]&#10;夜(よる)の向(む)こうへ&#10;君(きみ)と走(はし)り出(だ)す&#10;…"></textarea>
+        <div id="impCheck" class="small"></div>
+      </div>
+      <div class="imp-right">
+        <label class="imp-l">3. 設定</label>
+        <label>歌詞1行を <select id="impBars"><option value="1">1小節</option><option value="2" selected>2小節</option><option value="4">4小節</option></select> にする</label>
+        <label>刻み <select id="impGrid"><option value="0.5" selected>8分音符</option><option value="0.25">16分音符</option></select></label>
+        <label>高さ <select id="impOct"><option value="0" selected>歌ったまま</option><option value="1">1オクターブ上げる</option><option value="-1">1オクターブ下げる</option></select></label>
+        <label><input id="impSnap" type="checkbox" checked> キーから外れた音を、キーの音に寄せる</label>
+        <p class="small">自由なテンポで歌っていても、歌詞の行ごとに伸び縮みさせて拍にそろえます。コードはメロディから1小節ずつ付けます。</p>
+      </div>
+    </div>
+    <div class="row">
+      <span class="small" id="impMsg"></span>
+      <div class="spacer"></div>
+      <button id="impCancel">キャンセル</button>
+      <button id="impRun" class="primary">読み込む</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="syncModal" hidden>
+  <div class="modal-box sync-box" role="dialog" aria-label="歌と歌詞のタイミングを合わせる">
+    <div class="row"><h2 style="color:var(--text);font-size:16px">歌と歌詞のタイミングを合わせる</h2>
+      <span class="small">元の歌を聞きながら、<b>各行を歌い始めたら Space</b> を押してください（間違えたら Backspace で1つ戻る）</span></div>
+    <div class="sync-now">
+      <div id="syncPrev" class="sync-side"></div>
+      <div class="small">次に歌う行</div>
+      <div id="syncCur" class="sync-cur"></div>
+      <div id="syncNext" class="sync-side"></div>
+    </div>
+    <div class="row">
+      <span class="small" id="syncMsg"></span>
+      <div class="spacer"></div>
+      <button id="syncCancel">閉じる</button>
+      <button id="syncStart" class="primary">▶ 聞きながら合わせる</button>
+      <button id="syncApply" class="primary" disabled>この区切りで作り直す</button>
     </div>
   </div>
 </div>
@@ -698,6 +792,13 @@ const secById = id => song.sections.find(s => s.id === id);
 const curSec = () => secById(song.current) || song.sections[0];
 const secKey = sec => keyInfo(song.tonic + sec.shift, song.mode);
 const secBeats = sec => sec.chords.reduce((a, c) => a + c.beats, 0);
+// 聴き比べ：できた曲だけ（song）／元の歌だけ（guide）／両方（both）
+const listenMode = () => !song.guideOn ? 'song' : song.guideOnly ? 'guide' : 'both';
+function setListen(v) {
+  song.guideOn = v !== 'song';
+  song.guideOnly = v === 'guide';
+  if (playback) { const k = playback.kind; stop(); changed(); play(k); } else changed();
+}
 const beatsLabel = b => b % 4 === 0 ? b / 4 + '小節' : b + '拍';
 
 function neighborSection(dir) {
@@ -1015,7 +1116,7 @@ function buildPlan(ids, fixedVerse) {
     const vk = fixedVerse ?? verse;
     const key = secKey(sec);
     const start = t;
-    markers.push({ t, name: sec.name });
+    markers.push({ t, name: sec.name, sid });
     sec.chords.forEach((c, i) => {
       evs.push({ sec: sid, verse: vk, idx: i, t, beats: c.beats, secStart: start, info: chordInfo(c, key) });
       t += c.beats;
@@ -1056,12 +1157,25 @@ function schedulePass(t0) {
   if (!plan.total) return false;
   const beat = 60 / song.bpm;
   pb.passes.push({ t0, beat, plan });
+  const hasGuide = song.guideOn && guide.buffer && guide.id === song.guideId;
+  const only = hasGuide && song.guideOnly;                 // 元の歌だけを聴く（伴奏とメロディは鳴らさない）
   for (const e of plan.evs) {
-    renderChord(pb.out, e.v, t0 + e.t * beat, e.beats, beat, song.pattern);
+    if (!only) renderChord(pb.out, e.v, t0 + e.t * beat, e.beats, beat, song.pattern);
     pb.timers.push(setTimeout(() => onChordStart(e), Math.max(0, (t0 + e.t * beat - ctx.currentTime) * 1000)));
   }
-  if (song.drums) for (const h of drumHits(plan.total)) DRUM[h.n](pb.out, t0 + h.t * beat, h.v);
-  for (const n of plan.mel) note(pb.out, n.m, t0 + n.t * beat, n.d * beat, 0.6);
+  if (song.drums && !only) for (const h of drumHits(plan.total)) DRUM[h.n](pb.out, t0 + h.t * beat, h.v);
+  if (!only) for (const n of plan.mel) note(pb.out, n.m, t0 + n.t * beat, n.d * beat, 0.6);
+  // 元の歌：行ごとに、その行の始まりに合わせて録音の該当部分を鳴らす（行の中は歌ったままのテンポ）
+  if (hasGuide) {
+    for (const mk of plan.markers) for (const g of secById(mk.sid)?.guide || []) {
+      const at = t0 + (mk.t + g.beat) * beat;
+      if (at < ctx.currentTime - 0.05) continue;
+      const src = ctx.createBufferSource(), gn = ctx.createGain();
+      src.buffer = guide.buffer; gn.gain.value = 1.1;
+      src.connect(gn).connect(pb.out);
+      src.start(at, Math.max(0, g.t0 - 0.05), g.t1 - g.t0 + 0.05);
+    }
+  }
   const end = t0 + plan.total * beat;
   pb.timers.push(setTimeout(() => {
     if (playback !== pb) return;
@@ -1462,7 +1576,48 @@ function removeNote(i) {
   changed();
 }
 
+// ---- セクションを分ける・伸び縮みさせる ----
+// beat（拍）の位置でセクションを2つに分ける。コード・メロディ・元の歌の区切り・歌詞の行もそこで分ける
+function splitSection(sec, beat, name) {
+  const nsec = mkSec(newSecId(), name);
+  nsec.shift = sec.shift;
+  let acc = 0;
+  const first = [], rest = [];
+  for (const c of sec.chords) { (acc < beat ? first : rest).push(c); acc += c.beats; }
+  sec.chords = first; nsec.chords = rest;
+  nsec.melody = sec.melody.filter(n => n.t >= beat).map(n => ({ ...n, t: n.t - beat }));
+  sec.melody = sec.melody.filter(n => n.t < beat).map(n => ({ ...n, d: Math.min(n.d, beat - n.t) }));
+  // 歌詞の行の分け目：読み込んだ曲なら元の歌の行の区切りから、そうでなければ前半で使った歌詞の音の数から決める
+  let k;
+  if (sec.guide && sec.guide.length) k = sec.guide.filter(g => g.beat < beat).length;
+  else {
+    const used = sec.melody.filter(n => !n.tie).length;
+    const lines = (sec.verses[0] || '').split('\n');
+    let sum = 0;
+    k = lines.length;
+    for (let i = 0; i < lines.length; i++) { if (sum >= used) { k = i; break; } sum += parseLyrics(lines[i], song.lyrExt).all.length; }
+  }
+  nsec.verses = (sec.verses || []).map(v => v.split('\n').slice(k).join('\n'));
+  sec.verses = (sec.verses || []).map(v => v.split('\n').slice(0, k).join('\n'));
+  if (sec.guide) {
+    nsec.guide = sec.guide.filter(g => g.beat >= beat).map(g => ({ ...g, beat: g.beat - beat }));
+    sec.guide = sec.guide.filter(g => g.beat < beat);
+  }
+  song.sections.splice(song.sections.indexOf(sec) + 1, 0, nsec);
+  // 曲の並びでは、もとのセクションのすぐ後ろに入れる
+  song.arrangement = song.arrangement.flatMap(id => id === sec.id ? [id, nsec.id] : [id]);
+  return nsec;
+}
+// セクション全体の長さを f 倍にする（メロディ・コード・元の歌の行の位置）
+function stretchSection(sec, f) {
+  for (const n of sec.melody) { n.t *= f; n.d = Math.max(0.25, n.d * f); }
+  for (const c of sec.chords) c.beats = Math.max(1, c.beats * f);
+  for (const g of sec.guide || []) g.beat *= f;
+}
+
 function selectSection(id, verse = 0) {
+  ui.fix = null;
+  ui.rhy = null;
   song.current = id;
   ui.verse = verse;
   ui.sel = -1;
@@ -1493,8 +1648,60 @@ function restore(dir) {
 
 function changed() { save(); snapshot(); render(); }
 
+// ---- 歌から作る：手順の案内（ボイスメモから作った曲のときに、次に何をするかを並べる） ----
+// 済みの印：セクションごとの sec.done.rhy（リズム）・sec.done.fix（音程）、曲の song.steps.sync（歌詞の位置）・song.steps.out（書き出し）
+function markDone(sec, k) { sec.done = { ...(sec.done || {}), [k]: true }; }
+function markStep(k) { song.steps = { ...(song.steps || {}), [k]: true }; }
+// まだ済んでいないセクション（今のセクションを優先）へ移ってから、その道具を開く
+function guideOpen(k, open) {
+  const secs = song.sections.filter(x => x.melody.length && x.chords.length);
+  const cur = curSec();
+  const target = !cur.done?.[k] && secs.includes(cur) ? cur : secs.find(x => !x.done?.[k]) || cur;
+  if (target.id !== song.current) selectSection(target.id);
+  open();
+}
+function renderGuide() {
+  const box = $('#vguide');
+  const on = !!song.importInfo && !song.guideHide;
+  box.hidden = !on;
+  if (!on) return;
+  box.innerHTML = '';
+  const secs = song.sections.filter(x => x.melody.length && x.chords.length);
+  const cnt = k => secs.filter(x => x.done?.[k]).length;
+  const st = song.steps || {};
+  const hasGuide = guide.buffer && guide.id === song.guideId;
+  const rhyDone = secs.length && cnt('rhy') === secs.length, fixDone = secs.length && cnt('fix') === secs.length;
+  const next = !rhyDone ? 'rhy' : !fixDone ? 'fix' : !st.out ? 'out' : '';
+  const title = document.createElement('b');
+  title.textContent = '🎤 歌から作る';
+  box.append(title);
+  let no = 0;
+  const step = (key, done, ...els) => {
+    const d = document.createElement('div');
+    d.className = 'step' + (done ? ' done' : '') + (key === next ? ' next' : '');
+    const num = document.createElement('span');
+    num.className = 'num'; num.textContent = done ? '✓' : ++no && no;
+    if (done) no++;
+    d.append(num, ...els);
+    box.append(d);
+  };
+  const btn = (text, tip, fn) => Object.assign(smallButton(text, fn), { title: tip });
+  step('load', true, btn('読み込む', '別の録音や歌詞で、読み込み直します', openImport));
+  step('sync', !!st.sync, Object.assign(btn('歌詞を合わせる', '歌っている所と歌詞がずれているときに。元の歌を聞きながら、各行の歌い出しで Space を押します', openSync), { disabled: !hasGuide }));
+  step('rhy', rhyDone, btn(`リズムを整える ${cnt('rhy')}/${secs.length}`, 'セクションごとに、音の始まりと長さをそろえます。押すと、まだのセクションへ移ります', () => guideOpen('rhy', openRhythm)));
+  step('fix', fixDone, btn(`音程を整える ${cnt('fix')}/${secs.length}`, 'セクションごとに、コードとぶつかる音・キーから外れた音を直します。押すと、まだのセクションへ移ります', () => guideOpen('fix', openFix)));
+  if (hasGuide) step('listen', false, segControl('聴き比べる', [['song', 'できた曲'], ['guide', '元の歌'], ['both', '両方']], listenMode(), setListen));
+  step('out', !!st.out,
+    btn('MP3', '曲全体を音声（MP3）で書き出します', exportAudio),
+    btn('歌詞カード', 'コード付きの歌詞カードを開きます（印刷・PDF）', openLyricCard),
+    btn('ピアノ譜', 'メロディ・歌詞・コード・左手の和音が入った楽譜を開きます（印刷・PDF）', openScore));
+  const sp = document.createElement('div'); sp.className = 'spacer';
+  box.append(sp, btn('×', 'この案内を隠します（「🎤 歌から作る…」からまた読み込むと出ます）', () => { song.guideHide = true; changed(); }));
+}
+
 function render() {
   renderSettings();
+  renderGuide();
   renderSections();
   renderSection();
   renderCands();
@@ -1510,6 +1717,9 @@ function renderSettings() {
   $('#instrument').value = song.instrument;
   $('#drums').checked = song.drums;
   $('#loop').checked = song.loop;
+  $('#guideWrap').hidden = !(guide.buffer && guide.id === song.guideId);
+  $('#syncBtn').hidden = !(song.importInfo && guide.buffer && guide.id === song.guideId);
+  $('#listen').value = listenMode();
   $('#adv').value = Math.round(song.adventure * 100);
   $('#defLen').value = song.defLen;
   $('#snap').value = ui.snap;
@@ -1657,7 +1867,35 @@ function renderInspector() {
   box.innerHTML = '';
   const sec = curSec();
   const c = sec.chords[ui.sel], n = sec.melody[ui.note];
-  box.className = 'inspector' + (c || n ? ' on' : '');
+  box.className = 'inspector' + (c || n || ui.fix || ui.rhy ? ' on' : '');
+  if (ui.rhy) {
+    const before = sec.melody.filter(x => !x.tie).length, after = ui.rhy.mel.filter(x => !x.tie).length;
+    const mora = lineSpans(sec).reduce((a, sp) => a + (sp.mora || 0), 0);
+    const lab = document.createElement('b');
+    lab.textContent = 'リズムを整える';
+    box.append(lab,
+      segControl('強さ', [[1, '少し'], [2, 'しっかり']], ui.rhy.level, v => { ui.rhy.level = v; updateRhythm(); }),
+      hint((ui.rhy.level === 1 ? '音の始まりを8分音符にそろえ、短い隙間を埋めます' : '歌詞1行ごとに、音符の数を歌詞に合わせて形を整えます')
+        + ` ／ 緑が整えた後（歌う音 ${before}→${after}${mora ? `・歌詞 ${mora}音` : ''}）。適用後も ↶ で戻せます`),
+      Object.assign(document.createElement('div'), { className: 'spacer' }));
+    const ok = smallButton('適用', applyRhythm); ok.className = 'primary';
+    box.append(ok, smallButton('やめる', () => { ui.rhy = null; render(); }));
+    return;
+  }
+  if (ui.fix) {
+    const L = ui.fix.list, use = L.filter(f => !ui.fix.skip.has(f.i));
+    const by = {};
+    for (const f of use) by[f.why] = (by[f.why] || 0) + 1;
+    const lab = document.createElement('b');
+    lab.textContent = '理論チェック';
+    box.append(lab,
+      segControl('強さ', [[1, '弱'], [2, '中'], [3, '強']], ui.fix.level, v => { ui.fix.level = v; ui.fix.skip = new Set(); updateFix(); }),
+      hint(L.length ? `${use.length}音を直します（${Object.entries(by).map(([k, v]) => k + v).join('・')}）／ 緑が直した後。クリックで1音ずつ外せます` : '直す所はありません'),
+      Object.assign(document.createElement('div'), { className: 'spacer' }));
+    const ok = smallButton('適用', applyFix); ok.className = 'primary'; ok.disabled = !use.length;
+    box.append(ok, smallButton('やめる', () => { ui.fix = null; render(); }));
+    return;
+  }
   if (c) {
     const edit = fn => v => { fn(v); preview(c); changed(); };
     box.append(
@@ -1665,6 +1903,14 @@ function renderInspector() {
       segControl('味付け', [['', '基本'], ['7', '7th'], ['add9', 'add9'], ['sus4', 'sus4']], c.ext, edit(v => c.ext = v)),
       segControl('ベース', [[0, '根音'], [1, '3度'], [2, '5度']], c.inv, edit(v => c.inv = v)),
       smallButton('削除', () => removeAt(ui.sel)),
+      Object.assign(smallButton('ここで分ける', () => {
+        const at = sec.chords.slice(0, ui.sel).reduce((a, x) => a + x.beats, 0);
+        const name = prompt('分けた後ろ側のセクションの名前', sec.name + '（後半）');
+        if (!name) return;
+        splitSection(sec, at, name);
+        ui.sel = -1; ui.note = -1;
+        changed();
+      }), { disabled: ui.sel === 0, title: 'このコードの位置で、セクションを2つに分けます（メロディと歌詞も分けます）' }),
       hint('右の候補を選ぶと差し替え'),
     );
   } else if (n) {
@@ -1701,8 +1947,27 @@ function renderInspector() {
     if (cnt) {
       // 低い声・高い声で歌ったときに、メロディ全体の高さを合わせる
       const shift = dir => () => { sec.melody.forEach(n => { n.m = Math.min(108, Math.max(21, n.m + 12 * dir)); }); ui.rollCentered = null; changed(); };
-      box.append(smallButton('オクターブ↑', shift(1)), smallButton('オクターブ↓', shift(-1)),
+      const stretch = f => () => { stretchSection(sec, f); changed(); };
+      box.append(Object.assign(smallButton('長さ×2', stretch(2)), { title: 'メロディとコードを2倍の長さに伸ばします' }),
+        Object.assign(smallButton('長さ×½', stretch(0.5)), { title: 'メロディとコードを半分の長さに縮めます' }),
+        smallButton('オクターブ↑', shift(1)), smallButton('オクターブ↓', shift(-1)),
         smallButton('メロディを消す', () => { sec.melody = []; ui.note = -1; changed(); }));
+    }
+    const others = song.sections.filter(x => x !== sec && x.melody.length);
+    if (others.length) {
+      const sel = document.createElement('select');
+      sel.title = '選んだセクションのメロディとコードを、このセクションに写します（歌詞はこのセクションのまま）。同じ節で歌う所をそろえるときに';
+      sel.add(new Option('ほかのセクションと同じにする…', ''));
+      for (const o of others) sel.add(new Option(`「${o.name}」と同じメロディ・コードにする`, o.id));
+      sel.onchange = () => {
+        const src = secById(sel.value);
+        if (!src) return;
+        if (sec.melody.length && !confirm(`「${sec.name}」のメロディとコードを、「${src.name}」と同じにします（↶ で戻せます）`)) { sel.value = ''; return; }
+        copyMelodyFrom(sec, src);
+        ui.sel = -1; ui.note = -1; ui.rollCentered = null;
+        changed();
+      };
+      box.append(sel);
     }
   }
 }
@@ -1771,6 +2036,7 @@ function renderRoll() {
   const lyr = lyricsFor(sec);
   c2.font = `bold ${Math.max(10, Math.min(13, rowH - 1))}px system-ui, sans-serif`;
   c2.textBaseline = 'middle';
+  c2.globalAlpha = ui.rhy ? 0.3 : 1;
   sec.melody.forEach((n, i) => {
     if (n.t >= total) return;
     const s = segs.find(x => n.t >= x.t && n.t < x.t + x.beats);
@@ -1804,6 +2070,25 @@ function renderRoll() {
       c2.fillStyle = col('--accent'); c2.fillRect(hx, hy - 18, tw + 8, 16);
       c2.fillStyle = '#fff'; c2.fillText(mo.text, hx + 4, hy - 10);
     }
+  }
+  c2.globalAlpha = 1;
+  // リズムを整える：整えた後を緑で（のばしは薄い緑）
+  if (ui.rhy) for (const n of ui.rhy.mel) {
+    if (n.t >= total) continue;
+    const x = n.t * ppb + 1, w = Math.max(4, Math.min(n.d, total - n.t) * ppb - 2), h = Math.max(3, rowH - 2);
+    c2.fillStyle = n.tie ? 'rgba(31,157,85,.45)' : '#1f9d55';
+    c2.fillRect(x, y(n.m) + 1, w, h);
+  }
+  // 理論チェック：直す前（点線）と後（緑）。外した音は灰色
+  if (ui.fix) for (const f of ui.fix.list) {
+    const n = sec.melody[f.i];
+    const x = n.t * ppb + 1, w = Math.max(4, Math.min(n.d, total - n.t) * ppb - 2), h = Math.max(3, rowH - 2);
+    const off = ui.fix.skip.has(f.i);
+    c2.setLineDash([3, 3]); c2.strokeStyle = col('--text'); c2.lineWidth = 1.5;
+    c2.strokeRect(x, y(f.from) + 1, w, h);
+    c2.setLineDash([]); c2.lineWidth = 1;
+    c2.fillStyle = off ? 'rgba(140,140,150,.6)' : '#1f9d55';
+    c2.fillRect(x, y(f.to) + 1, w, h);
   }
   // 鼻歌：読み取った声の高さを青い点で（今の声は大きく）
   if (ui.humTrail && ui.humTrail.length) {
@@ -1942,6 +2227,12 @@ function rollDown(e) {
   e.preventDefault();
   const i = hitNote(sec, beat, midi);
   ui.hover = null;
+  if (ui.rhy) return;                                     // リズムのプレビュー中は編集しない
+  if (ui.fix) {                                           // 理論チェック中は、クリックで直す／直さないを切り替える
+    const f = ui.fix.list.find(x => { const n = sec.melody[x.i]; return beat >= n.t && beat < n.t + n.d && (midi === x.to || midi === x.from); });
+    if (f) { ui.fix.skip.has(f.i) ? ui.fix.skip.delete(f.i) : ui.fix.skip.add(f.i); renderInspector(); renderRoll(); }
+    return;
+  }
   if (e.button === 2) { if (i >= 0) removeNote(i); return; }
   ui.sel = -1;
   if (i >= 0) {
@@ -2174,7 +2465,7 @@ const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;
 // 日本語の歌は「1音符＝1モーラ」が基本。歌詞をモーラ（音符に載せる単位）に分ける
 const SMALL_KANA = 'ぁぃぅぇぉゃゅょゎゕゖァィゥェォャュョヮヵヶ';
 const EXT_KANA = 'っッー〜～';
-const SKIP_CHARS = /[\s、。，．,.!?！？「」『』（）()・…‥〜"'“”‘’]/u;
+const SKIP_CHARS = /[\s、。，．,.!?！？「」『』（）()・…‥〜"'“”‘’♪♫☆★♡]|\p{Extended_Pictographic}|[\uFE0F\u200D]/u; // 絵文字・記号は数えない
 const HAN = /\p{sc=Han}|[々〆]/u;
 
 function parseLyrics(text, countExt) {
@@ -2449,6 +2740,604 @@ function applySongLyrics() {
   setSideTab('lyrics');
 }
 
+// ================= メロディにコードを付ける・理論チェック =================
+// 曲のキーでよく使うコード（id は平行長調基準）。小節ごとに、歌っている音との相性と、つながりの自然さで選ぶ
+const HARMONY_IDS = { major: ['I', 'IIm', 'IIIm', 'IV', 'V', 'VIm'], minor: ['VIm', 'IIm', 'IV', 'V', 'I', 'III7'] };
+
+// 1つのコードに対する、ある音の相性（構成音＞音階の音＞ぶつかる音＞キー外）
+function toneFit(pc, info, scale) {
+  if (info.pcs.includes(pc)) return pc === info.pcs[0] ? 1.2 : 1;
+  if (info.pcs.includes((pc + 11) % 12) && scale.has(pc)) return -0.8; // 構成音の半音上（ぶつかりやすい）
+  return scale.has(pc) ? -0.1 : -0.5;
+}
+
+// セクションのメロディに、1小節ずつコードを付ける（ビタビ法：小節ごとの相性＋前のコードからのつながり）
+function harmonize(sec, bars) {
+  const key = secKey(sec), mode = song.mode;
+  const scale = new Set([0, 2, 4, 5, 7, 9, 11].map(x => (key.pc + x) % 12));
+  const ids = HARMONY_IDS[mode];
+  const infos = ids.map(id => chordInfo({ id, ext: '', inv: 0 }, key));
+  const fit = Array.from({ length: bars }, (_, b) => ids.map((_, k) => {
+    let s = 0;
+    for (const n of sec.melody) {
+      const ov = Math.min(n.t + n.d, (b + 1) * 4) - Math.max(n.t, b * 4);
+      if (ov <= 0) continue;
+      const strong = n.t >= b * 4 && (n.t - b * 4) % 2 === 0 ? 1.5 : 1; // 小節の1・3拍目に始まる音は重く
+      s += ov * strong * toneFit(n.m % 12, infos[k], scale);
+    }
+    return s;
+  }));
+  const trans = (a, b) => {
+    const w = a === null ? (tableFor(null, mode).find(([id]) => id === ids[b])?.[1] || 1) : weight(ids[a], ids[b], mode);
+    return 0.5 * Math.log(1 + w) - (a === b ? 0.4 : 0);
+  };
+  let score = ids.map((_, k) => fit[0][k] + trans(null, k));
+  const back = [];
+  for (let b = 1; b < bars; b++) {
+    const nb = [], ns = ids.map((_, k) => {
+      let best = -Infinity, arg = 0;
+      ids.forEach((_, j) => { const v = score[j] + trans(j, k); if (v > best) { best = v; arg = j; } });
+      nb.push(arg);
+      return best + fit[b][k];
+    });
+    back.push(nb);
+    score = ns;
+  }
+  let k = score.indexOf(Math.max(...score));
+  const path = [k];
+  for (let b = bars - 2; b >= 0; b--) { k = back[b][k]; path.unshift(k); }
+  sec.chords = path.map(i => ({ id: ids[i], beats: 4, ext: '', inv: 0 }));
+}
+
+// ---- 理論チェック：コードに対してまずい音を見つけ、リズムと上がり下がりは残したまま、近い「合う音」に寄せる ----
+// 強さ  弱：キー外の音・強拍／長い音でぶつかる音  中：＋強拍と長い音を構成音に  強：＋8分以上の音をなるべく構成音に・大きすぎる跳躍を縮める
+function theoryFixes(sec, level) {
+  const key = secKey(sec), total = secBeats(sec);
+  const scale = new Set([0, 2, 4, 5, 7, 9, 11].map(x => (key.pc + x) % 12));
+  const segs = [];
+  let acc = 0;
+  for (const c of sec.chords) { segs.push({ t: acc, e: acc + c.beats, pcs: new Set(chordInfo(c, key).pcs) }); acc += c.beats; }
+  const chordAt = t => segs.find(s => t >= s.t && t < s.e);
+  const order = sec.melody.map((n, i) => i).filter(i => sec.melody[i].t < total).sort((a, b) => sec.melody[a].t - sec.melody[b].t);
+  const fixes = [];
+  let prev = null;
+  const nearest = (m, ok) => {
+    for (let d = 0; d <= 6; d++) {
+      const cands = [m - d, m + d].filter(x => ok(((x % 12) + 12) % 12));
+      if (cands.length) return cands.length === 2 && prev !== null ? cands.sort((a, b) => Math.abs(a - prev) - Math.abs(b - prev))[0] : cands[0];
+    }
+    return m;
+  };
+  for (const i of order) {
+    const n = sec.melody[i], s = chordAt(n.t);
+    let m = n.m, why = null;
+    if (n.tie || !s) { prev = m; continue; }
+    const pc = m % 12, inChord = s.pcs.has(pc), strong = n.t % 2 === 0 || n.d >= 1;
+    const avoid = !inChord && s.pcs.has((pc + 11) % 12);
+    if (!scale.has(pc) && !inChord) { m = nearest(m, p => scale.has(p)); why = 'キー外'; }
+    if (!s.pcs.has(m % 12) && strong && (avoid || s.pcs.has((m % 12 + 11) % 12))) { m = nearest(m, p => s.pcs.has(p)); why = 'ぶつかり'; }
+    if (level >= 2 && !s.pcs.has(m % 12) && strong) { m = nearest(m, p => s.pcs.has(p)); why = why || '強拍'; }
+    if (level >= 3) {
+      if (!s.pcs.has(m % 12) && n.d >= 0.5) { m = nearest(m, p => s.pcs.has(p)); why = why || '構成音へ'; }
+      if (prev !== null && Math.abs(m - prev) > 9) { m += 12 * Math.sign(prev - m); why = why || '跳躍'; }
+    }
+    if (m !== n.m) fixes.push({ i, from: n.m, to: m, why });
+    prev = m;
+  }
+  return fixes;
+}
+
+// ================= ボイスメモの読み込み =================
+// 録音した歌から声の高さを読み取り、歌詞の行と対応づけ、1行を決まった小節数に当てはめて音符にする。
+// 自由なテンポで歌っていても、行ごとに伸び縮みさせて拍にそろえる
+const guide = { buffer: null, id: null };   // 元の歌（ガイドとして一緒に鳴らす）
+const GUIDE_DB = 'kotone-guide';
+function idb(mode, fn) {
+  return new Promise((res, rej) => {
+    const rq = indexedDB.open(GUIDE_DB, 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore('audio');
+    rq.onerror = () => rej(rq.error);
+    rq.onsuccess = () => {
+      const tx = rq.result.transaction('audio', mode), st = tx.objectStore('audio');
+      const r = fn(st);
+      tx.oncomplete = () => res(r && r.result);
+      tx.onerror = () => rej(tx.error);
+    };
+  });
+}
+async function loadGuide() {
+  if (!song.guideId || guide.id === song.guideId) return;
+  try {
+    const rec = await idb('readonly', st => st.get('latest'));
+    if (rec && rec.id === song.guideId) {
+      audio();
+      guide.buffer = await ctx.decodeAudioData(await rec.blob.arrayBuffer());
+      guide.blob = rec.blob;
+      guide.id = rec.id;
+      render();
+    }
+  } catch (e) { /* 元の歌が残っていなければ、ガイドなしで使う */ }
+}
+
+const yieldUI = () => new Promise(r => setTimeout(r, 0));
+
+// 歌詞のテキストを、セクション（見出し）と行に分ける。見出しのない最初の1行だけのブロックは曲名とみなす
+function importLines(lyricsText) {
+  let title = null;
+  let blocks = parseSongLyrics(lyricsText);
+  if (blocks.length > 1 && !blocks[0].tag && blocks.slice(1).every(b => b.tag) && blocks[0].lines.length === 1) {
+    title = blocks[0].lines[0].replace(/[♪☆★\s]+/g, ' ').trim();
+    blocks = blocks.slice(1);
+  }
+  if (blocks.some(b => !b.tag)) { const lab = autoLabels(blocks); blocks.forEach((b, i) => { b.tag = b.tag || lab[i]; }); }
+  const lines = [];
+  blocks.forEach((b, bi) => b.lines.forEach(text => lines.push({ bi, tag: b.tag, text, mora: parseLyrics(text, song.lyrExt).all.length })));
+  return { title, blocks, lines };
+}
+
+// starts を渡すと、行の歌い出しの時刻（秒）としてそのまま使う（タイミング合わせの結果）。渡さなければ自動で対応づける
+async function analyzeVoice(file, lyricsText, opts, progress, starts = null) {
+  audio();
+  progress('音声を読み込んでいます…');
+  const raw = await ctx.decodeAudioData(await file.arrayBuffer());
+  // 16kHz・モノラルにして解析を軽くする
+  const SR = 16000;
+  const off = new OfflineAudioContext(1, Math.ceil(raw.duration * SR), SR);
+  const src = off.createBufferSource(); src.buffer = raw; src.connect(off.destination); src.start();
+  const x = (await off.startRendering()).getChannelData(0);
+
+  // ---- 1. 声の高さ（10ms ごと） ----
+  const hop = 160, W = 1024, frames = [];
+  const rmsAll = [];
+  for (let o = 0; o + W < x.length; o += hop) { let s = 0; for (let j = 0; j < W; j++) s += x[o + j] * x[o + j]; rmsAll.push(Math.sqrt(s / W)); }
+  const sortedR = [...rmsAll].sort((a, b) => a - b);
+  const th = Math.max(0.006, sortedR[Math.floor(sortedR.length * 0.1)] * 3); // 静かな所の3倍より大きい声だけ
+  for (let i = 0; i < rmsAll.length; i++) {
+    if (i % 400 === 0) { progress(`声の高さを読み取っています… ${Math.round(i / rmsAll.length * 100)}%`); await yieldUI(); }
+    const r = rmsAll[i] > th ? yin(x.subarray(i * hop, i * hop + W), SR) : null;
+    frames.push({ t: i * hop / SR + 0.016, rms: rmsAll[i], m: r && r.clarity > 0.75 && r.hz > 70 && r.hz < 900 ? 69 + 12 * Math.log2(r.hz / 440) : null });
+  }
+  progress('音符に分けています…');
+  await yieldUI();
+  const med = a => { const s = [...a].sort((p, q) => p - q); return s[s.length >> 1]; };
+  const sm = frames.map((f, i) => {
+    if (f.m === null) return null;
+    const w = [];
+    for (let j = i - 2; j <= i + 2; j++) if (frames[j] && frames[j].m !== null) w.push(frames[j].m);
+    return med(w);
+  });
+  // ---- 2. 音符（秒）：声の途切れ・音量の落ち込み・高さの変化で区切る ----
+  const raws = [];
+  let cur = null, gap = 0, altN = 0;
+  sm.forEach((m, i) => {
+    const t = frames[i].t, rms = frames[i].rms;
+    if (m === null) { if (++gap >= 3 && cur) { raws.push(cur); cur = null; } return; }
+    gap = 0;
+    if (!cur) { cur = { t0: t, t1: t, ms: [m], peak: rms, dip: false }; altN = 0; return; }
+    if (rms < cur.peak * 0.45) cur.dip = true;
+    else if (cur.dip && rms > cur.peak * 0.7 && t - cur.t0 > 0.12) { raws.push(cur); cur = { t0: t, t1: t, ms: [m], peak: rms, dip: false }; altN = 0; return; }
+    if (Math.abs(m - med(cur.ms.slice(-15))) > 0.7) {
+      if (++altN >= 4) {
+        const st = frames[i - altN + 1].t;
+        raws.push({ ...cur, t1: st });
+        cur = { t0: st, t1: t, ms: sm.slice(i - altN + 1, i + 1).filter(v => v !== null), peak: rms, dip: false };
+        altN = 0;
+        return;
+      }
+    } else altN = 0;
+    cur.ms.push(m); cur.t1 = t; cur.peak = Math.max(cur.peak, rms);
+  });
+  if (cur) raws.push(cur);
+  const N = raws.filter(n => n.t1 - n.t0 >= 0.07).map(n => ({ t0: n.t0, t1: n.t1, m: med(n.ms) }));
+  if (N.length < 4) throw new Error('歌声を読み取れませんでした。声だけがはっきり入った録音を使ってください。');
+  // フレーズ（0.3秒以上の切れ目で区切る）
+  const phrases = [];
+  let ph = [];
+  for (const n of N) { if (ph.length && n.t0 - ph[ph.length - 1].t1 > 0.3) { phrases.push(ph); ph = []; } ph.push(n); }
+  if (ph.length) phrases.push(ph);
+
+  // ---- 3. 歌詞 → セクションと行 ----
+  const { title, blocks, lines } = importLines(lyricsText);
+  if (!lines.length) throw new Error('歌詞を入れてください。');
+
+  // ---- 4. 行 ↔ フレーズの対応 ----
+  if (starts) {
+    // 人が合わせた歌い出しの時刻で区切る（少し手前から次の行の手前まで）
+    lines.forEach((l, i) => {
+      const a = starts[i] - 0.12, b = i + 1 < starts.length ? starts[i + 1] - 0.12 : Infinity;
+      l.notes = N.filter(n => n.t0 >= a && n.t0 < b).map(n => ({ ...n }));
+    });
+  } else {
+  // 動的計画法：各行に連続するフレーズを1〜4個。音符の数と歌詞の音の数の差、
+  // および「歌詞の音の数に比例した長さ」からのずれを小さく。歌詞と関係ないフレーズ（前置き・咳など）は飛ばせる
+  const P = phrases.length, L = lines.length, INF = 1e9;
+  const totalMora = lines.reduce((a, l) => a + l.mora, 0) || 1;
+  const rate = phrases.reduce((a, p) => a + (p[p.length - 1].t1 - p[0].t0), 0) / totalMora; // 1音あたりの秒数（平均）
+  const dp = Array.from({ length: L + 1 }, () => new Array(P + 1).fill(INF));
+  const back = Array.from({ length: L + 1 }, () => new Array(P + 1).fill(null));
+  dp[0][0] = 0;
+  for (let i = 0; i <= L; i++) for (let j = 0; j <= P; j++) {
+    if (dp[i][j] >= INF) continue;
+    if (j < P) { const c = dp[i][j] + 3 + phrases[j].length; if (c < dp[i][j + 1]) { dp[i][j + 1] = c; back[i][j + 1] = { skip: true }; } }
+    if (i < L) {
+      let cnt = 0;
+      for (let k = 1; k <= 4 && j + k <= P; k++) {
+        cnt += phrases[j + k - 1].length;
+        const dur = phrases[j + k - 1][phrases[j + k - 1].length - 1].t1 - phrases[j][0].t0;
+        const c = dp[i][j] + Math.abs(cnt - lines[i].mora) + (k - 1) * 0.5 + 3 * Math.abs(Math.log(dur / Math.max(0.2, lines[i].mora * rate)));
+        if (c < dp[i + 1][j + k]) { dp[i + 1][j + k] = c; back[i + 1][j + k] = { from: j }; }
+      }
+    }
+  }
+  for (let i = L, j = P; i > 0 || j > 0;) {
+    const b = back[i][j];
+    if (!b) throw new Error('歌詞と歌の対応づけに失敗しました。');
+    if (b.skip) { j--; continue; }
+    lines[i - 1].notes = phrases.slice(b.from, j).flat().map(n => ({ ...n }));
+    j = b.from; i--;
+  }
+  }
+
+  // ---- 5. 音の高さ：行ごとの音程のずれ（半音未満）を補正 → オクターブの取り違えを直す ----
+  for (const l of lines) {
+    let sx = 0, sy = 0;
+    for (const n of l.notes) { const w = n.t1 - n.t0, a = (n.m - Math.round(n.m)) * 2 * Math.PI; sx += w * Math.cos(a); sy += w * Math.sin(a); }
+    const offc = Math.atan2(sy, sx) / (2 * Math.PI);
+    const center = med(l.notes.map(n => n.m));
+    for (const n of l.notes) {
+      let m = n.m - offc;
+      while (m < center - 8) m += 12;   // 前後よりずっと低い（高い）のは、声の高さを1オクターブ取り違えたもの
+      while (m > center + 8) m -= 12;
+      n.p = Math.round(m) + 12 * opts.octave;
+    }
+  }
+  // キー（曲全体）：音の長さで重みを付けた12音の分布を、長調・短調の典型と比べる
+  const MAJ = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88], MIN = [6.33, 2.68, 3.52, 5.38, 2.6, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+  const corr = (a, b) => { const ma = a.reduce((s, v) => s + v, 0) / 12, mb = b.reduce((s, v) => s + v, 0) / 12; let n = 0, da = 0, db = 0; for (let i = 0; i < 12; i++) { n += (a[i] - ma) * (b[i] - mb); da += (a[i] - ma) ** 2; db += (b[i] - mb) ** 2; } return n / Math.sqrt(da * db || 1); };
+  const hist = new Array(12).fill(0);
+  for (const l of lines) for (const n of l.notes) hist[((n.p % 12) + 12) % 12] += n.t1 - n.t0;
+  let best = { r: -2 };
+  for (let k = 0; k < 12; k++) for (const [mode, prof] of [['major', MAJ], ['minor', MIN]]) {
+    const r = corr(hist, prof.map((_, i) => prof[(i - k + 12) % 12]));
+    if (r > best.r) best = { r, k, mode };
+  }
+
+  // ---- 6. 歌詞の音の数に合わせる（足りなければ長い音を分け、多ければ「のばし」に）と、拍へのあてはめ ----
+  const bpl = opts.barsPerLine, beatsPerLine = bpl * 4, grid = opts.grid;
+  const slots = lines.map((l, i) => {
+    if (!l.notes.length) return null;
+    const nx = lines.slice(i + 1).find(o => o.notes.length);
+    return (nx ? nx.notes[0].t0 : l.notes[l.notes.length - 1].t1 + 0.6) - l.notes[0].t0;
+  }).filter(Boolean).sort((a, b) => a - b);
+  const bpm = Math.round(Math.min(180, Math.max(50, beatsPerLine / slots[slots.length >> 1] * 60)));
+  lines.forEach((l, i) => {
+    const ns = l.notes;
+    while (ns.length && ns.length < l.mora) {                       // 長い音を2つに分ける
+      let k = 0;
+      ns.forEach((n, j) => { if (n.t1 - n.t0 > ns[k].t1 - ns[k].t0) k = j; });
+      const n = ns[k], mid = (n.t0 + n.t1) / 2;
+      ns.splice(k, 1, { ...n, t1: mid }, { ...n, t0: mid });
+    }
+    const extra = ns.length - l.mora;                                // 余る分は、前の音との高さの差が小さい短い音から「のばし」に
+    if (extra > 0) {
+      ns.map((n, j) => ({ j, cost: j === 0 ? Infinity : Math.abs(n.p - ns[j - 1].p) + (n.t1 - n.t0) }))
+        .sort((a, b) => a.cost - b.cost).slice(0, extra).forEach(({ j }) => { ns[j].tie = true; });
+    }
+    if (!ns.length) return;
+    const nx = lines.slice(i + 1).find(o => o.notes.length);
+    const ls = ns[0].t0, le = nx ? nx.notes[0].t0 : ns[ns.length - 1].t1 + 0.6;
+    const span = Math.max(0.5, le - ls);
+    const toBeat = t => (t - ls) / span * beatsPerLine;
+    let last = -grid;
+    for (const n of ns) {
+      let b = Math.max(last + grid, Math.round(toBeat(n.t0) / grid) * grid);
+      if (b > beatsPerLine - grid) b = beatsPerLine - grid;
+      n.b = b;
+      n.e = Math.max(b + grid, Math.round(toBeat(n.t1) / grid) * grid);
+      last = b;
+    }
+    ns.forEach((n, j) => { const nb = ns[j + 1]?.b ?? beatsPerLine; n.e = Math.min(n.e, nb, beatsPerLine); if (n.e <= n.b) n.e = n.b + grid / 2; });
+    l.guide = { t0: ls, t1: le };
+  });
+  return { lines, blocks, title, bpm, key: best, phrases: phrases.length, notes: N.length };
+}
+
+// 解析結果から新しい曲を作る
+function buildImportedSong(res, opts, fileName) {
+  const sg = newSong();
+  sg.title = res.title || fileName.replace(/\.[^.]+$/, '') || '読み込んだ曲';
+  sg.tonic = res.key.k;   // 長調・短調とも主音
+  sg.mode = res.key.mode;
+  sg.bpm = res.bpm;
+  sg.sections = [];
+  sg.arrangement = [];
+  const byTag = new Map();
+  const bpl = opts.barsPerLine * 4;
+  res.blocks.forEach((b, bi) => {
+    let sec = byTag.get(b.tag);
+    const verse = sec ? sec.verses.length : 0;
+    if (!sec) {
+      sec = { id: 's' + (sg.sections.length + 1), name: b.tag, shift: 0, chords: [], melody: [], verses: [], guide: [] };
+      sg.sections.push(sec);
+      byTag.set(b.tag, sec);
+    }
+    sec.verses[verse] = b.lines.join('\n');
+    sg.arrangement.push(sec.id);
+    if (verse > 0) return;                                  // メロディとガイドは1回目に歌った分を使う（2番以降は歌詞だけ）
+    res.lines.filter(l => l.bi === bi).forEach((l, li) => {
+      for (const n of l.notes || []) {
+        if (n.b === undefined) continue;
+        const note = { t: li * bpl + n.b, d: n.e - n.b, m: n.p };
+        if (n.tie) note.tie = true;
+        sec.melody.push(note);
+      }
+      if (l.guide) sec.guide.push({ beat: li * bpl, t0: l.guide.t0, t1: l.guide.t1 });
+    });
+    sec.bars = b.lines.length * opts.barsPerLine;
+  });
+  sg.current = sg.sections[0].id;
+  return sg;
+}
+
+// ---- 読み込みの画面 ----
+function openImport() {
+  closeMenu();
+  const has = song.sections.some(s => (s.verses || []).some(v => v && v.trim()));
+  if (!$('#impLyrics').value.trim() && has) $('#impLyrics').value = songLyricsText();
+  $('#impMsg').textContent = '';
+  $('#impModal').hidden = false;
+  renderImpCheck();
+}
+function renderImpCheck() {
+  const t = $('#impLyrics').value;
+  const lines = importLines(t).lines.map(l => l.text);
+  const mora = lines.reduce((a, l) => a + parseLyrics(l, song.lyrExt).all.length, 0);
+  const kanji = parseLyrics(lines.join('\n'), song.lyrExt).noReading;
+  $('#impCheck').innerHTML = lines.length
+    ? `歌詞 ${lines.length}行・${mora}音` + (kanji ? `　<span class="warn">読みのない漢字が${kanji}字あります。<code>涙(なみだ)</code> のように読みを付けると、歌と歌詞の対応が正確になります</span>` : '')
+    : '歌詞を貼り付けてください（<code>[Aメロ]</code> などの見出しがあるとセクションに分かれます）';
+}
+async function runImport() {
+  const file = $('#impFile').files[0];
+  if (!file) { alert('ボイスメモ（音声ファイル）を選んでください。'); return; }
+  const opts = { barsPerLine: +$('#impBars').value, grid: +$('#impGrid').value, octave: +$('#impOct').value, snapKey: $('#impSnap').checked };
+  const btn = $('#impRun');
+  btn.disabled = true;
+  const progress = t => { $('#impMsg').textContent = t; };
+  try {
+    const msg = await importVoice(file, file.name, $('#impLyrics').value, opts, null, progress);
+    progress(msg);
+    setTimeout(() => { $('#impModal').hidden = true; }, 1800);
+    setSideTab('lyrics');
+  } catch (e) {
+    progress('');
+    alert('読み込めませんでした：' + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ボイスメモから曲を作る（読み込み・タイミング合わせの共通部分）。できた曲の説明を返す
+async function importVoice(file, name, lyricsText, opts, starts, progress) {
+  {
+    stop();
+    const res = await analyzeVoice(file, lyricsText, opts, progress, starts);
+    progress('コードを付けています…');
+    await yieldUI();
+    const sg = migrate(buildImportedSong(res, opts, file.name));
+    const prevSong = song;
+    song = sg;                                              // コード付け・キーへの寄せは、新しい曲の上で行う
+    for (const sec of song.sections) {
+      if (opts.snapKey) {
+        const scale = new Set([0, 2, 4, 5, 7, 9, 11].map(x => (secKey(sec).pc + x) % 12));
+        for (const n of sec.melody) if (!scale.has(n.m % 12)) n.m += [1, -1, 2, -2].find(d => scale.has(((n.m + d) % 12 + 12) % 12));
+      }
+      harmonize(sec, Math.max(1, sec.bars || Math.ceil(Math.max(0, ...sec.melody.map(n => n.t + n.d)) / 4)));
+      delete sec.bars;
+    }
+    song.guideId = 'g' + Date.now();
+    try { await idb('readwrite', st => st.put({ id: song.guideId, blob: file }, 'latest')); } catch (e) { /* 保存できなくても、この画面の間はガイドを使える */ }
+    guide.buffer = await ctx.decodeAudioData(await file.arrayBuffer());
+    guide.blob = file;
+    guide.id = song.guideId;
+    song.guideOn = true;
+    song.importInfo = { lyrics: lyricsText, opts, name, starts: starts || null }; // タイミング合わせのやり直しに使う
+    const matched = res.lines.filter(l => l.notes && l.notes.length).length;
+    const kname = keyInfo(song.tonic, song.mode).name;
+    song.current = song.sections[0].id;
+    ui.sel = -1; ui.note = -1; ui.verse = 0; ui.rollCentered = null;
+    hist.stack.push(JSON.stringify(prevSong)); hist.i = hist.stack.length - 1; // 読み込む前の曲に ↶ で戻れるように
+    changed();
+    return `できました：${kname}・BPM ${song.bpm}・${song.sections.length}セクション・歌詞${res.lines.length}行のうち${matched}行を歌と対応づけ`;
+  }
+}
+
+// ---- 歌と歌詞のタイミング合わせ：元の歌を聞きながら、各行の歌い出しで Space を押してもらう ----
+const sync = { lines: [], taps: [], src: null, t0: 0, timer: 0 };
+function openSync() {
+  if (!(song.importInfo && guide.buffer && guide.id === song.guideId)) { alert('ボイスメモを読み込んだ曲で使えます。'); return; }
+  stop();
+  sync.lines = importLines(song.importInfo.lyrics).lines;
+  sync.taps = [];
+  $('#syncModal').hidden = false;
+  renderSync();
+}
+function syncStop() {
+  if (sync.src) { try { sync.src.stop(); } catch (e) { /* 停止済み */ } sync.src = null; }
+  clearInterval(sync.timer);
+}
+function syncStart() {
+  audio();
+  syncStop();
+  sync.taps = [];
+  sync.src = ctx.createBufferSource();
+  sync.src.buffer = guide.buffer;
+  sync.src.connect(master);
+  sync.t0 = ctx.currentTime + 0.05;
+  sync.src.start(sync.t0);
+  sync.src.onended = () => { sync.src = null; renderSync(); };
+  sync.timer = setInterval(renderSync, 200);
+  renderSync();
+}
+function syncTap() {
+  if (!sync.src || sync.taps.length >= sync.lines.length) return;
+  sync.taps.push(ctx.currentTime - sync.t0 - 0.05); // 押すのは少し遅れがちなので 50ms 手前に
+  renderSync();
+}
+function renderSync() {
+  const n = sync.taps.length, L = sync.lines;
+  const line = i => L[i] ? `<span class="sync-tag">${esc(L[i].tag)}</span>${esc(L[i].text)}` : '';
+  $('#syncCur').innerHTML = n < L.length ? line(n) : '<span class="sync-done">すべての行を合わせました</span>';
+  $('#syncPrev').innerHTML = n ? '✓ ' + line(n - 1) : '';
+  $('#syncNext').innerHTML = n + 1 < L.length ? '次：' + line(n + 1) : '';
+  const now = sync.src ? Math.max(0, ctx.currentTime - sync.t0) : null;
+  $('#syncMsg').textContent = `${n} / ${L.length} 行` + (now !== null ? `　再生中 ${Math.floor(now / 60)}:${String(Math.floor(now % 60)).padStart(2, '0')}` : '');
+  $('#syncStart').textContent = sync.src ? '■ 止める' : (n ? '▶ 最初からやり直す' : '▶ 聞きながら合わせる');
+  $('#syncApply').disabled = n < L.length;
+}
+async function syncApply() {
+  syncStop();
+  const info = song.importInfo;
+  $('#syncMsg').textContent = '作り直しています…';
+  try {
+    const msg = await importVoice(guide.blob, info.name, info.lyrics, info.opts, sync.taps.slice(), t => { $('#syncMsg').textContent = t; });
+    markStep('sync'); changed();
+    $('#syncMsg').textContent = msg.replace('できました', '作り直しました');
+    setTimeout(() => { $('#syncModal').hidden = true; }, 1500);
+    setSideTab('lyrics');
+  } catch (e) {
+    alert('作り直せませんでした：' + e.message);
+  }
+}
+
+// ---- 理論チェックの画面（ピアノロールの上に直す前後を重ねて見せ、採用を選ぶ） ----
+function openFix() {
+  const sec = curSec();
+  if (!sec.chords.length || !sec.melody.length) { alert('コードとメロディがあるセクションで使えます。'); return; }
+  ui.rhy = null;
+  ui.fix = { level: ui.fix?.level || 2, list: [], skip: new Set() };
+  ui.sel = -1; ui.note = -1;
+  updateFix();
+}
+function updateFix() {
+  const sec = curSec();
+  ui.fix.list = theoryFixes(sec, ui.fix.level);
+  ui.fix.skip = new Set([...ui.fix.skip].filter(i => ui.fix.list.some(f => f.i === i)));
+  if (!ui.fix.list.length && !sec.done?.fix) { markDone(sec, 'fix'); save(); }   // 直す所がなければ、確かめた時点で済み
+  render();
+}
+function applyFix() {
+  const sec = curSec();
+  for (const f of ui.fix.list) if (!ui.fix.skip.has(f.i)) sec.melody[f.i].m = f.to;
+  markDone(sec, 'fix');
+  ui.fix = null;
+  changed();
+}
+
+// ================= リズムを整える =================
+// 歌った声から作ったメロディは、音の始まりがばらつき、細かい隙間や重なりがある。
+// 少し：始まりを8分音符の位置にそろえ、短い隙間を前の音を伸ばして埋める（音の数と高さはそのまま）
+// しっかり：さらに歌詞の1行ごとに、音符の数を歌詞の音の数に合わせ（多い音は「のばし」に、足りなければ長い音を分ける）、
+//           行の最後の音を行の終わりの半拍前まで伸ばす
+// 歌詞の行の区切り：元の歌の行の位置があればそれを、なければセクションを行の数で等分する
+function lineSpans(sec) {
+  const total = secBeats(sec);
+  const lines = parseLyrics(verseText(sec), song.lyrExt).lines.filter(l => l.mora.length);
+  const g = sec.guide || [];
+  if (lines.length && g.length === lines.length)
+    return lines.map((l, i) => ({ s: g[i].beat, e: i + 1 < g.length ? g[i + 1].beat : total, mora: l.mora.length }));
+  if (lines.length && total % lines.length === 0)
+    return lines.map((l, i) => ({ s: i * total / lines.length, e: (i + 1) * total / lines.length, mora: l.mora.length }));
+  return [{ s: 0, e: total, mora: lines.reduce((a, l) => a + l.mora.length, 0) || null }];
+}
+function rhythmFix(sec, level) {
+  const q = x => Math.round(x * 2) / 2;
+  const out = [];
+  for (const sp of lineSpans(sec)) {
+    // のばし（tie）は前の音の続きとしてまとめ、行の中の音を時間順に
+    let ns = [];
+    for (const n of [...sec.melody].filter(n => n.t >= sp.s && n.t < sp.e).sort((a, b) => a.t - b.t || b.m - a.m)) {
+      if (ns.length && n.tie && n.m === ns[ns.length - 1].m) { const p = ns[ns.length - 1]; p.d = n.t + n.d - p.t; continue; }
+      ns.push({ ...n });
+    }
+    if (!ns.length) continue;
+    // 始まりを8分音符の位置へ。同じ位置に重なったら後ろへずらす（入らなければ16分）。行の外へは出さない
+    let prev = -1;
+    for (const n of ns) {
+      let t = Math.max(sp.s, q(n.t));
+      if (t >= sp.e) t = Math.floor(n.t * 4) / 4;
+      if (t <= prev) t = prev + 0.5 < sp.e ? prev + 0.5 : prev + 0.25;
+      n.t = t; prev = t;
+    }
+    ns = ns.filter(n => n.t < sp.e);
+    // 長さ：次の音まで（1拍以内の隙間は埋める。しっかりでは全部つなげる）。行の最後の音は、しっかりでは行の終わりの半拍前まで（最大1小節）
+    const lengths = () => ns.forEach((n, k) => {
+      const nx = ns[k + 1];
+      if (nx) n.d = Math.min(nx.t - n.t, nx.t - (n.t + n.d) <= 1 || level >= 2 ? nx.t - n.t : Math.max(0.5, q(n.d)));
+      else {
+        const end = sp.e - 0.5;
+        n.d = level >= 2 && end > n.t ? Math.min(4, end - n.t) : Math.min(Math.max(0.5, q(n.d)), sp.e - n.t);
+      }
+      n.d = Math.max(0.25, n.d);
+    });
+    lengths();
+    if (level >= 2 && sp.mora) {
+      const sung = () => ns.filter(n => !n.tie).length;
+      // 足りない：いちばん長い音を2つに分ける（前を8分の位置で切る）
+      while (sung() < sp.mora) {
+        const i = ns.reduce((b, n, k) => (n.d > ns[b].d ? k : b), 0);
+        const n = ns[i];
+        if (n.d < 0.5) break;
+        const h = n.d >= 1 ? Math.max(0.5, Math.floor(n.d / 2 * 2) / 2) : 0.25;
+        ns.splice(i + 1, 0, { ...n, t: n.t + h, d: n.d - h, tie: false });
+        n.d = h;
+      }
+      // 多い：前の音と高さが近い短い音から順に「のばし」にする（高さの動きは残し、歌詞だけ前の音の続きにする）
+      while (sung() > sp.mora) {
+        let best = -1, score = Infinity;
+        ns.forEach((n, k) => {
+          if (!k || n.tie) return;
+          const sc = n.d * 4 + Math.abs(n.m - ns[k - 1].m) * 0.5;
+          if (sc < score) { score = sc; best = k; }
+        });
+        if (best < 0) break;
+        ns[best].tie = true;
+      }
+      lengths();
+    }
+    out.push(...ns);
+  }
+  // 行の外にある音（前奏など）はそのまま
+  const spans = lineSpans(sec);
+  for (const n of sec.melody) if (!spans.some(sp => n.t >= sp.s && n.t < sp.e)) out.push({ ...n });
+  return out.sort((a, b) => a.t - b.t);
+}
+function openRhythm() {
+  const sec = curSec();
+  if (!sec.chords.length || !sec.melody.length) { alert('コードとメロディがあるセクションで使えます。'); return; }
+  ui.fix = null;
+  ui.rhy = { level: ui.rhy?.level || 1, mel: [] };
+  ui.sel = -1; ui.note = -1;
+  updateRhythm();
+}
+function updateRhythm() {
+  ui.rhy.mel = rhythmFix(curSec(), ui.rhy.level);
+  render();
+}
+function applyRhythm() {
+  curSec().melody = ui.rhy.mel;
+  markDone(curSec(), 'rhy');
+  ui.rhy = null;
+  changed();
+}
+
+// ほかのセクションのメロディとコードを、このセクションに写す（同じ節で歌う所をそろえる）。歌詞と元の歌はこのセクションのまま
+function copyMelodyFrom(sec, src) {
+  sec.melody = src.melody.map(n => ({ ...n }));
+  sec.chords = src.chords.map(c => ({ ...c }));
+  sec.shift = src.shift;
+}
+
 // ================= 書き出し =================
 function vlq(n) {
   const b = [n & 0x7f];
@@ -2512,6 +3401,386 @@ function download(blob, name) {
   a.download = name;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+// ---- 音声（MP3）で書き出す：今の楽器・伴奏・ドラム・元の歌の設定のまま、曲全体を書き出す ----
+// アプリの音作り（note・renderChord・DRUM）を、ctx と master を差し替えて OfflineAudioContext の側で使う
+async function exportAudio() {
+  const plan = buildPlan(song.arrangement.length ? song.arrangement : song.sections.map(s => s.id));
+  if (!plan.total) { alert('コードが入ったセクションがありません。'); return; }
+  const say = t => { $('#status').textContent = t; };
+  audio();
+  say('音源を読み込み中…');
+  for (let i = 0; i < 150 && banks[song.instrument]?.state === 'loading'; i++) await new Promise(r => setTimeout(r, 200));
+  say('音声を作っています…');
+  const beat = 60 / song.bpm, lead = 0.4, SR = 44100;
+  const len = lead + plan.total * beat + 3;
+  const off = new OfflineAudioContext(2, Math.ceil(len * SR), SR);
+  const saved = { ctx, master };
+  let buf;
+  try {
+    ctx = off;
+    master = off.createGain(); master.gain.value = 0.7;
+    master.connect(off.createDynamicsCompressor()).connect(off.destination);
+    for (const e of plan.evs) renderChord(master, e.v, lead + e.t * beat, e.beats, beat, song.pattern);
+    if (song.drums) for (const h of drumHits(plan.total)) DRUM[h.n](master, lead + h.t * beat, h.v);
+    for (const n of plan.mel) note(master, n.m, lead + n.t * beat, n.d * beat, 0.7);
+    if (song.guideOn && guide.buffer && guide.id === song.guideId) {
+      for (const mk of plan.markers) for (const g of secById(mk.sid)?.guide || []) {
+        const src = off.createBufferSource(), gn = off.createGain();
+        src.buffer = guide.buffer; gn.gain.value = 1.1;
+        src.connect(gn).connect(master);
+        src.start(lead + (mk.t + g.beat) * beat, Math.max(0, g.t0 - 0.05), g.t1 - g.t0 + 0.05);
+      }
+    }
+  } finally {
+    ctx = saved.ctx; master = saved.master;
+  }
+  try {
+    buf = await off.startRendering();
+  } catch (e) { alert('音声を作れませんでした：' + e.message); setStatus(); return; }
+  say('MP3 に変換しています…');
+  const name = song.title || '無題の曲';
+  try {
+    download(await encodeMp3(buf), name + '.mp3');
+  } catch (e) {                                           // MP3 の変換部品を読めないとき（オフラインなど）は WAV で
+    download(encodeWav(buf), name + '.wav');
+  }
+  if (song.importInfo && !song.steps?.out) { markStep('out'); changed(); }
+  say('書き出しました');
+  setTimeout(setStatus, 2500);
+}
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = () => rej(new Error('読み込めません: ' + src));
+    document.head.appendChild(s);
+  });
+}
+const to16 = x => Math.max(-1, Math.min(1, x)) * 32767;
+async function encodeMp3(buf) {
+  if (!window.lamejs) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js');
+  const enc = new lamejs.Mp3Encoder(2, buf.sampleRate, 192);
+  const L = buf.getChannelData(0), R = buf.getChannelData(1), BLK = 1152, out = [];
+  const l16 = new Int16Array(BLK), r16 = new Int16Array(BLK);
+  for (let i = 0; i < buf.length; i += BLK) {
+    const n = Math.min(BLK, buf.length - i);
+    for (let j = 0; j < n; j++) { l16[j] = to16(L[i + j]); r16[j] = to16(R[i + j]); }
+    const b = enc.encodeBuffer(l16.subarray(0, n), r16.subarray(0, n));
+    if (b.length) out.push(new Uint8Array(b));
+    if (i % (BLK * 400) === 0) await yieldUI();          // 長い曲でも画面が固まらないように
+  }
+  const end = enc.flush();
+  if (end.length) out.push(new Uint8Array(end));
+  return new Blob(out, { type: 'audio/mpeg' });
+}
+function encodeWav(buf) {
+  const L = buf.getChannelData(0), R = buf.getChannelData(1), n = buf.length, SR = buf.sampleRate;
+  const v = new DataView(new ArrayBuffer(44 + n * 4));
+  const str = (o, s) => [...s].forEach((ch, i) => v.setUint8(o + i, ch.charCodeAt(0)));
+  str(0, 'RIFF'); v.setUint32(4, 36 + n * 4, true); str(8, 'WAVEfmt '); v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); v.setUint16(22, 2, true); v.setUint32(24, SR, true); v.setUint32(28, SR * 4, true);
+  v.setUint16(32, 4, true); v.setUint16(34, 16, true); str(36, 'data'); v.setUint32(40, n * 4, true);
+  for (let i = 0; i < n; i++) { v.setInt16(44 + i * 4, to16(L[i]), true); v.setInt16(46 + i * 4, to16(R[i]), true); }
+  return new Blob([v.buffer], { type: 'audio/wav' });
+}
+
+// ---- コード付きの歌詞カード（新しいタブで開き、印刷・PDF保存する） ----
+// コードは「そのコードに変わってから最初に歌う音」の歌詞の上に置く（歌詞と音符の対応は lyricMap と同じ数え方）
+function cardTokens(line, kana) {
+  const out = [];                                          // [表示, 受け持つ音の数]
+  const add = ch => {
+    if (SKIP_CHARS.test(ch)) { out.push([ch, 0]); return; }
+    const last = out[out.length - 1];
+    if (last && last[1] > 0 && (SMALL_KANA.includes(ch) || (!song.lyrExt && EXT_KANA.includes(ch)))) last[0] += ch;
+    else out.push([ch, 1]);
+  };
+  const re = /((?:\p{sc=Han}|[々〆])+)[(（]([^)）]*)[)）]|[A-Za-z'’]+(?:-[A-Za-z'’]+)*|./gsu;
+  for (const m of line.matchAll(re)) {
+    if (m[1] !== undefined) {
+      let n = 0;
+      for (const ch of m[2]) if (!SKIP_CHARS.test(ch) && !(n && (SMALL_KANA.includes(ch) || (!song.lyrExt && EXT_KANA.includes(ch))))) n++;
+      out.push([kana ? m[2] : m[1], n]);
+    } else if (/^[A-Za-z]/.test(m[0])) out.push([m[0], m[0].split('-').length]);
+    else if (HAN.test(m[0])) out.push([m[0], 1]);
+    else add(m[0]);
+  }
+  return out;
+}
+function cardSection(sec, v, kana) {
+  const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const key = secKey(sec);
+  const lines = verseText(sec, v).split('\n').filter(l => l.trim());
+  if (!lines.length) return `<p class="only">${sec.chords.map(c => esc(chordInfo(c, key).name)).join('　')}</p>`;
+  const toks = lines.map(l => cardTokens(l, kana));
+  const pos = [];                                          // 歌詞の音の通し番号 → [行, まとまり, 何音目]
+  toks.forEach((ts, li) => ts.forEach(([, n], ti) => { for (let k = 0; k < n; k++) pos.push(`${li},${ti},${k}`); }));
+  const sung = sec.melody.filter(n => !n.tie).sort((a, b) => a.t - b.t || b.m - a.m);
+  const labels = {};
+  let acc = 0, last = null;
+  for (const c of sec.chords) {
+    const name = chordInfo(c, key).name;
+    let idx = sung.findIndex(n => n.t >= acc && n.t < acc + c.beats);
+    if (idx < 0) idx = sung.reduce((b, n, i) => (n.t < acc ? i : b), -1);   // その間に歌い出す音がなければ、鳴っている音の上に
+    const p = idx >= 0 && idx < pos.length ? pos[idx] : last;
+    if (p) (labels[p] = labels[p] || []).push(name), last = p;
+    acc += c.beats;
+  }
+  return toks.map((ts, li) => '<p>' + ts.map(([text, n], ti) => {
+    let marks = '';
+    for (let k = 0; k < n; k++) if (labels[`${li},${ti},${k}`])     // 1つの漢字が何音も受け持つときは、何音目かで右へずらす
+      marks += `<span class="ch" style="left:${Math.round(k / n * 100)}%">${labels[`${li},${ti},${k}`].map(esc).join('&nbsp;')}</span>`;
+    return `<span class="tk">${marks}${esc(text)}</span>`;
+  }).join('') + '</p>').join('\n');
+}
+function openLyricCard() {
+  const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const ids = song.arrangement.length ? song.arrangement : song.sections.map(s => s.id);
+  const seen = {};
+  const order = ids.map(sid => ({ sec: secById(sid), v: seen[sid] = (seen[sid] ?? -1) + 1 })).filter(o => o.sec);
+  const body = kana => order.map(({ sec, v }) => {
+    const nm = sec.name.replace(/\d+$/, '');
+    const cls = /サビ/.test(nm) ? 'chorus' : /盛り上げ/.test(nm) ? 'up' : '';
+    return `<section class="${cls}"><div class="lab">${esc(nm)}</div><div class="lyr">${cardSection(sec, v, kana)}</div></section>`;
+  }).join('\n');
+  const title = esc(song.title || '無題の曲');
+  const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>${title} 歌詞カード</title><style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic", sans-serif; color: #3a3236; background: #e8e2e4;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .bar { position: sticky; top: 0; z-index: 2; display: flex; gap: 14px; align-items: center; padding: 10px 16px; background: #fff;
+    border-bottom: 1px solid #ddd; font-size: 14px; }
+  .bar button { font: inherit; padding: 6px 14px; border-radius: 8px; border: 1px solid #d9485f; background: #d9485f; color: #fff; cursor: pointer; }
+  .bar .small { color: #888; font-size: 12px; }
+  .page { position: relative; width: 210mm; min-height: 297mm; margin: 16px auto; padding: 19mm 16mm 16mm; overflow: hidden; background: #fffaf6;
+    box-shadow: 0 2px 12px rgba(0,0,0,.15); }
+  @media print { body { background: none; } .bar { display: none; } .page { margin: 0; box-shadow: none; } }
+  .rainbow { position: absolute; left: 0; right: 0; top: 0; height: 5mm; background: linear-gradient(90deg, #ff8a8a, #ffc46b, #ffe66b, #8fdc8f, #7cc7ff, #b49cff); }
+  .dot { position: absolute; border-radius: 50%; opacity: .15; }
+  .d1 { width: 60mm; height: 60mm; background: #ffb38a; right: -18mm; top: 12mm; }
+  .d2 { width: 46mm; height: 46mm; background: #8fd3ff; left: -16mm; bottom: 26mm; }
+  header { text-align: center; position: relative; }
+  .note { color: #ff8a8a; font-size: 18pt; margin: 0 4mm; vertical-align: 3pt; }
+  h1 { display: inline; font-size: 26pt; letter-spacing: .08em; margin: 0; color: #4a3a40; }
+  .sub { font-size: 9pt; color: #9a8a90; margin-top: 2.5mm; letter-spacing: .15em; }
+  .cols { columns: 2; column-gap: 9mm; margin-top: 9mm; position: relative; }
+  section { margin-bottom: 6.5mm; break-inside: avoid; }
+  .lab { display: inline-block; font-size: 8.5pt; font-weight: 700; color: #fff; background: #b8a7ae; border-radius: 99px;
+    padding: .6mm 3.2mm; margin-bottom: 1mm; letter-spacing: .1em; }
+  .lyr p { margin: 0; font-size: 12.6pt; line-height: 1; padding-top: 5.2mm; padding-bottom: 1.9mm; letter-spacing: .03em; white-space: nowrap; }
+  .lyr p.only { font-family: "Avenir Next", sans-serif; font-weight: 700; color: #d9485f; font-size: 10pt; }
+  .tk { position: relative; }
+  .ch { position: absolute; left: 0; bottom: 100%; margin-bottom: 1.1mm; font-family: "Avenir Next", "Hiragino Sans", sans-serif;
+    font-size: 8.6pt; font-weight: 700; color: #d9485f; white-space: nowrap; letter-spacing: 0; }
+  section.up .lab { background: #ffb36b; }
+  section.chorus .lab { background: #ff7f8f; }
+  section.chorus .lyr { border-left: 1.6mm solid #ffc2c9; padding: 0 0 1mm 3.5mm; background: rgba(255,228,232,.45); border-radius: 0 3mm 3mm 0; }
+  section.chorus .lyr p { font-weight: 700; color: #4a3036; }
+  .v[hidden] { display: none; }
+</style></head><body>
+<div class="bar"><label><input type="checkbox" id="kana"> ひらがなにする</label><label><input type="checkbox" id="chords" checked> コードを書く</label>
+  <button onclick="print()">印刷・PDFに保存</button><span class="small">PDFにするときは、印刷の画面で「送信先：PDFに保存」を選んでください</span></div>
+<div class="page"><div class="rainbow"></div><div class="dot d1"></div><div class="dot d2"></div>
+  <header><span class="note">♪</span><h1>${title}</h1><span class="note">♪</span>
+    <div class="sub">Key: ${esc(keyInfo(song.tonic, song.mode).name)}　／　Tempo: ♩= ${song.bpm}</div></header>
+  <div class="cols v" id="vKanji">${body(false)}</div>
+  <div class="cols v" id="vKana" hidden>${body(true)}</div>
+</div>
+<script>
+  const sw = () => { vKanji.hidden = kana.checked; vKana.hidden = !kana.checked;
+    document.querySelectorAll('.ch, .only').forEach(e => e.style.visibility = chords.checked ? '' : 'hidden'); };
+  kana.onchange = sw; chords.onchange = sw;
+<\/script></body></html>`;
+  const w = window.open('', '_blank');
+  if (!w) { alert('新しいタブを開けませんでした。ポップアップを許可してください。'); return; }
+  w.document.write(html);
+  w.document.close();
+  if (song.importInfo && !song.steps?.out) { markStep('out'); changed(); }
+}
+
+// ---- ピアノ譜（新しいタブで開き、印刷・PDF保存する） ----
+// 上の段：メロディ＋歌詞＋コード名、下の段：左手（コードの和音を、コードの長さだけ押さえる）。
+// 曲を MusicXML にして、楽譜の描画は Verovio（開いたタブで読み込む）に任せる。16分音符＝1 で数える
+function scoreXml(withLyrics) {
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const DIV = 4, BAR = 16;
+  const key = keyInfo(song.tonic, song.mode);
+  const fifths = { 0: 0, 7: 1, 2: 2, 9: 3, 4: 4, 11: 5, 6: 6, 5: -1, 10: -2, 3: -3, 8: -4, 1: -5 }[key.pc];
+  const NAMES = fifths >= 0
+    ? [['C', 0], ['C', 1], ['D', 0], ['D', 1], ['E', 0], ['F', 0], ['F', 1], ['G', 0], ['G', 1], ['A', 0], ['A', 1], ['B', 0]]
+    : [['C', 0], ['D', -1], ['D', 0], ['E', -1], ['E', 0], ['F', 0], ['G', -1], ['G', 0], ['A', -1], ['A', 0], ['B', -1], ['B', 0]];
+  const keyAlter = {};
+  for (const s of 'CDEFGAB') keyAlter[s] = fifths > 0 && 'FCGDAEB'.slice(0, fifths).includes(s) ? 1 : fifths < 0 && 'BEADGCF'.slice(0, -fifths).includes(s) ? -1 : 0;
+  const TYPES = { 16: ['whole', 0], 12: ['half', 1], 8: ['half', 0], 6: ['quarter', 1], 4: ['quarter', 0], 3: ['eighth', 1], 2: ['eighth', 0], 1: ['16th', 0] };
+  // 小節の中の位置 start から length の長さを、楽譜の書き方どおりに分ける（拍の途中からは次の拍の頭まで短い音符で埋める）
+  const pieces = (start, length) => {
+    const out = [];
+    for (let p = start; length > 0;) {
+      const v = p % 4 ? (p % 2 || length < 2 ? 1 : 2)
+        : p % 16 === 0 && length >= 16 ? 16 : p % 16 === 0 && length >= 12 ? 12
+        : p % 8 === 0 && length >= 8 ? 8 : p % 8 === 0 && length >= 6 ? 6
+        : length >= 4 ? 4 : length >= 3 ? 3 : Math.min(2, length);
+      out.push(v); p += v; length -= v;
+    }
+    return out;
+  };
+  // 左手：ベース音をいちばん下（F2〜E3）に、その上に構成音を詰めて重ねる
+  const leftHand = info => {
+    const b = 41 + ((info.bassPc - 41) % 12 + 12) % 12;
+    const set = new Set([b]);
+    for (const pc of info.pcs) { const m = b + ((pc - b) % 12 + 12) % 12; if (m !== b && m <= b + 16) set.add(m); }
+    return [...set].sort((x, y) => x - y).slice(0, 4);
+  };
+  const noteXml = (acc, m, dur, staff, voice, o = {}) => {
+    const [typ, dots] = TYPES[dur];
+    let x = '<note>' + (o.chord ? '<chord/>' : ''), step, alter, oct;
+    if (o.rest) x += '<rest/>';
+    else {
+      [step, alter] = NAMES[m % 12]; oct = Math.floor(m / 12) - 1;
+      x += `<pitch><step>${step}</step>${alter ? `<alter>${alter}</alter>` : ''}<octave>${oct}</octave></pitch>`;
+    }
+    x += `<duration>${dur}</duration>${o.tieStop ? '<tie type="stop"/>' : ''}${o.tieStart ? '<tie type="start"/>' : ''}`;
+    x += `<voice>${voice}</voice><type>${typ}</type>${'<dot/>'.repeat(dots)}`;
+    if (!o.rest) {                                          // 小節の中で有効な臨時記号を覚えておき、変わるときだけ書く
+      const k = step + oct, cur = k in acc ? acc[k] : keyAlter[step];
+      acc[k] = alter;
+      if (cur !== alter) x += `<accidental>${{ 1: 'sharp', '-1': 'flat', 0: 'natural' }[alter]}</accidental>`;
+    }
+    x += `<staff>${staff}</staff>`;
+    if (o.tieStop || o.tieStart) x += `<notations>${o.tieStop ? '<tied type="stop"/>' : ''}${o.tieStart ? '<tied type="start"/>' : ''}</notations>`;
+    if (o.lyric && withLyrics) x += `<lyric number="1"><syllabic>single</syllabic><text>${esc(o.lyric)}</text></lyric>`;
+    return x + '</note>';
+  };
+  // 曲の並びどおりに、メロディ・コード・セクション名を通しの位置（16分単位）で並べる
+  const melody = [], chords = [], marks = [], seen = {};
+  let total = 0;
+  for (const sid of song.arrangement.length ? song.arrangement : song.sections.map(s => s.id)) {
+    const sec = secById(sid);
+    if (!sec) continue;
+    const v = seen[sid] = (seen[sid] ?? -1) + 1;
+    const beats = secBeats(sec);
+    if (!beats) continue;
+    const base = total, sk = secKey(sec);
+    marks.push([base, sec.name.replace(/\d+$/, '')]);
+    let acc = 0;
+    for (const c of sec.chords) { chords.push({ st: base + acc * DIV, ln: c.beats * DIV, info: chordInfo(c, sk) }); acc += c.beats; }
+    const lyr = lyricsFor(sec, v);
+    const order = sec.melody.map((n, i) => i).sort((a, b) => sec.melody[a].t - sec.melody[b].t || sec.melody[b].m - sec.melody[a].m);
+    for (const i of order) {
+      const n = sec.melody[i], st = base + Math.round(n.t * DIV), prev = melody[melody.length - 1];
+      if (n.t >= beats || (prev && prev.st === st)) continue;      // 同じ位置に重なった音は1つにする
+      if (prev && prev.st + prev.ln > st) prev.ln = st - prev.st;  // 前の音と重なるなら、前の音を縮める
+      const end = Math.min(base + Math.round((n.t + n.d) * DIV), base + beats * DIV);
+      melody.push({ st, ln: Math.max(1, end - st), m: n.m, lyr: n.tie ? '' : lyr[i] });
+    }
+    total += beats * DIV;
+  }
+  const bars = Math.ceil(total / BAR);
+  const out = ['<?xml version="1.0" encoding="UTF-8"?>',
+    '<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">',
+    `<score-partwise version="4.0"><work><work-title>${esc(song.title || '無題の曲')}</work-title></work>`,
+    '<part-list><score-part id="P1"><part-name>Piano</part-name></score-part></part-list><part id="P1">'];
+  // 1つの段を書く：items（st・ln と、音の高さの配列を返す pitches）を、休符で間を埋めながら
+  const staffXml = (items, lo, hi, staff, voice) => {
+    const acc = {}, mx = [];
+    let t = lo;
+    const rests = to => { for (const p of pieces(t - lo, to - t)) { mx.push(noteXml(acc, 0, p, staff, voice, { rest: true })); t += p; } };
+    for (const it of items) {
+      const en = it.st + it.ln;
+      if (en <= lo || it.st >= hi) continue;
+      const s0 = Math.max(it.st, lo), e0 = Math.min(en, hi);
+      if (s0 > t) rests(s0);
+      const ps = pieces(s0 - lo, e0 - s0);
+      ps.forEach((p, i) => it.pitches.forEach((m, j) => mx.push(noteXml(acc, m, p, staff, voice, {
+        chord: j > 0, tieStop: i > 0 || it.st < lo, tieStart: i < ps.length - 1 || en > hi,
+        lyric: i === 0 && j === 0 && it.st >= lo ? it.lyr : '' }))));
+      t = e0;
+    }
+    if (t < hi) rests(hi);
+    return mx.join('');
+  };
+  const right = melody.filter(x => x.ln > 0).map(x => ({ ...x, pitches: [x.m] }));
+  const left = chords.map(c => ({ st: c.st, ln: c.ln, pitches: leftHand(c.info) }));
+  for (let b = 0; b < bars; b++) {
+    const lo = b * BAR, hi = lo + BAR;
+    let mx = `<measure number="${b + 1}">`;
+    if (b === 0) mx += `<attributes><divisions>${DIV}</divisions><key><fifths>${fifths}</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time>`
+      + '<staves>2</staves><clef number="1"><sign>G</sign><line>2</line></clef><clef number="2"><sign>F</sign><line>4</line></clef></attributes>'
+      + `<direction placement="above"><direction-type><metronome><beat-unit>quarter</beat-unit><per-minute>${song.bpm}</per-minute></metronome></direction-type><staff>1</staff><sound tempo="${song.bpm}"/></direction>`;
+    for (const [pos, name] of marks) if (pos === lo)
+      mx += `<direction placement="above"><direction-type><rehearsal>${esc(name)}</rehearsal></direction-type><staff>1</staff></direction>`;
+    for (const c of chords) if (c.st >= lo && c.st < hi) {    // コード名（上の段の上）
+      const [, root, kind, , bass] = c.info.name.match(/^([A-G][♯♭]*)([^/]*)(\/([A-G][♯♭]*))?$/) || [null, 'C', ''];
+      const part = (tag, s) => `<${tag}-step>${s[0]}</${tag}-step>` + (s.length > 1 ? `<${tag}-alter>${s[1] === '♯' ? s.length - 1 : 1 - s.length}</${tag}-alter>` : '');
+      const minor = /^m(?!aj)/.test(kind) && !kind.startsWith('M');
+      mx += `<harmony><root>${part('root', root)}</root><kind text="${esc(kind)}">${minor ? 'minor' : 'major'}</kind>`
+        + (bass ? `<bass>${part('bass', bass)}</bass>` : '') + (c.st > lo ? `<offset>${c.st - lo}</offset>` : '') + '<staff>1</staff></harmony>';
+    }
+    mx += staffXml(right, lo, hi, 1, 1) + `<backup><duration>${BAR}</duration></backup>` + staffXml(left, lo, hi, 2, 5);
+    if (b === bars - 1) mx += '<barline location="right"><bar-style>light-heavy</bar-style></barline>';
+    out.push(mx + '</measure>');
+  }
+  out.push('</part></score-partwise>');
+  return out.join('\n');
+}
+const VEROVIO = 'https://cdn.jsdelivr.net/npm/verovio@6.3.0/dist/verovio-toolkit-wasm.js';
+function openScore() {
+  if (!song.sections.some(s => s.chords.length)) { alert('コードが入ったセクションがありません。'); return; }
+  const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const title = esc(song.title || '無題の曲');
+  const data = JSON.stringify({ title: song.title || '無題の曲', lyr: scoreXml(true), plain: scoreXml(false) }).replace(/</g, '\\u003c');
+  const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>${title} ピアノ譜</title><style>
+  @page { size: A4; margin: 0; }
+  html, body { margin: 0; }
+  body { font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic", sans-serif; background: #e8e2e4; }
+  .bar { position: sticky; top: 0; z-index: 2; display: flex; gap: 14px; align-items: center; padding: 10px 16px; background: #fff;
+    border-bottom: 1px solid #ddd; font-size: 14px; }
+  .bar button { font: inherit; padding: 6px 14px; border-radius: 8px; border: 1px solid #d9485f; background: #d9485f; color: #fff; cursor: pointer; }
+  .bar button.sub { background: #fff; color: #d9485f; }
+  .bar .small { color: #888; font-size: 12px; }
+  .pg { width: 210mm; height: 297mm; margin: 16px auto; overflow: hidden; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.15); page-break-after: always; }
+  .pg:last-child { page-break-after: auto; }
+  .pg svg { width: 210mm; height: 297mm; display: block; }
+  .pg svg text { font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic", sans-serif; }
+  .pg svg g.reh { transform: translateY(-420px); }        /* セクション名を、コード名と重ならない高さへ */
+  #msg { text-align: center; padding: 40px; color: #666; }
+  @media print { body { background: none; } .bar, #msg { display: none; } .pg { margin: 0; box-shadow: none; } }
+</style></head><body>
+<div class="bar"><label><input type="checkbox" id="lyr" checked> 歌詞を入れる</label>
+  <button onclick="print()">印刷・PDFに保存</button>
+  <button class="sub" id="xml" title="MuseScore などの楽譜ソフトで開いて、さらに直せます">楽譜ソフト用に保存（MusicXML）</button>
+  <span class="small">PDFにするときは、印刷の画面で「送信先：PDFに保存」を選んでください</span></div>
+<div id="msg">楽譜を作っています…</div><div id="pages"></div>
+<script>const DATA = ${data};<\/script>
+<script src="${VEROVIO}" onerror="document.getElementById('msg').textContent = '楽譜を描く部品を読み込めませんでした。ネット接続を確かめて、もう一度開いてください。'"><\/script>
+<script>
+  let tk;
+  const cur = () => document.getElementById('lyr').checked ? DATA.lyr : DATA.plain;
+  function draw() {
+    tk.setOptions({ pageWidth: 2100, pageHeight: 2970, pageMarginTop: 90, pageMarginBottom: 90, pageMarginLeft: 110, pageMarginRight: 110,
+      scale: 38, adjustPageHeight: false, breaks: 'auto', header: 'auto', footer: 'none', lyricSize: 4.0, spacingLinear: 0.34, spacingNonLinear: 0.62,
+      spacingStaff: 10, spacingSystem: 14, justifyVertically: false, condenseFirstPage: false, font: 'Leipzig', svgViewBox: true, measureMinWidth: 22 });
+    tk.loadData(cur());
+    let h = '';
+    for (let p = 1; p <= tk.getPageCount(); p++) h += '<div class="pg">' + tk.renderToSVG(p) + '</div>';
+    document.getElementById('pages').innerHTML = h;
+    document.getElementById('msg').hidden = true;
+  }
+  if (window.verovio) verovio.module.onRuntimeInitialized = () => { tk = new verovio.toolkit(); draw(); };
+  document.getElementById('lyr').onchange = () => tk && draw();
+  document.getElementById('xml').onclick = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([cur()], { type: 'application/vnd.recordare.musicxml+xml' }));
+    a.download = DATA.title + '.musicxml'; a.click();
+  };
+<\/script></body></html>`;
+  const w = window.open('', '_blank');
+  if (!w) { alert('新しいタブを開けませんでした。ポップアップを許可してください。'); return; }
+  w.document.write(html);
+  w.document.close();
+  if (song.importInfo && !song.steps?.out) { markStep('out'); changed(); }
 }
 
 function chordText() {
@@ -2636,17 +3905,44 @@ $('#preset').onchange = e => {
 };
 
 // ファイルメニュー（項目を選んだら閉じる）
-const closeMenu = () => $('#fileMenu').removeAttribute('open');
+const closeMenu = () => document.querySelectorAll('details.menu[open]').forEach(m => m.removeAttribute('open'));
 // メニューが画面の外にはみ出さない向きに開く
-$('#fileMenu').addEventListener('toggle', () => {
-  const m = $('#fileMenu');
+for (const m of document.querySelectorAll('details.menu')) m.addEventListener('toggle', () => {
   if (!m.open) return;
   m.classList.remove('left');
   const body = m.querySelector('.menu-body');
   if (body.getBoundingClientRect().left < 8) m.classList.add('left');
 });
-document.addEventListener('click', e => { if (!e.target.closest('#fileMenu')) closeMenu(); });
+// メニューの外をクリックしたとき・項目を選んだときに閉じる
+document.addEventListener('click', e => {
+  const inside = e.target.closest('details.menu');
+  if (e.target.closest('.menu-body button')) { closeMenu(); return; }
+  document.querySelectorAll('details.menu[open]').forEach(m => { if (m !== inside) m.removeAttribute('open'); });
+});
 $('#midi').onclick = () => { closeMenu(); exportMidi(); };
+$('#importVoice').onclick = openImport;
+$('#voiceBtn').onclick = openImport;
+$('#exportAudio').onclick = () => { closeMenu(); exportAudio(); };
+$('#lyricCard').onclick = () => { closeMenu(); openLyricCard(); };
+$('#scoreBtn').onclick = () => { closeMenu(); openScore(); };
+$('#impCancel').onclick = () => { $('#impModal').hidden = true; };
+$('#impRun').onclick = runImport;
+$('#impLyrics').oninput = renderImpCheck;
+$('#harmBtn').onclick = () => {
+  const sec = curSec();
+  if (!sec.melody.length) { alert('メロディがあるセクションで使えます。'); return; }
+  const bars = Math.max(1, Math.ceil(Math.max(secBeats(sec), ...sec.melody.map(n => n.t + n.d)) / 4));
+  harmonize(sec, bars);
+  ui.sel = -1;
+  changed();
+};
+$('#fixBtn').onclick = openFix;
+$('#rhyBtn').onclick = openRhythm;
+$('#syncBtn').onclick = openSync;
+$('#syncStart').onclick = () => { if (sync.src) { syncStop(); renderSync(); } else syncStart(); };
+$('#syncCancel').onclick = () => { syncStop(); $('#syncModal').hidden = true; };
+$('#syncApply').onclick = syncApply;
+$('#listen').onchange = e => setListen(e.target.value);
 $('#copyText').onclick = async () => {
   closeMenu();
   try { await navigator.clipboard.writeText(chordText()); $('#status').textContent = 'コード譜をコピーしました'; }
@@ -2666,6 +3962,7 @@ $('#file').onchange = async e => {
     song = migrate({ ...newSong(), ...data });
     ui.sel = -1; ui.note = -1;
     changed();
+    loadGuide();
   } catch (err) {
     alert('読み込めませんでした：' + err.message);
   }
@@ -2712,6 +4009,15 @@ document.addEventListener('click', e => { if (e.target.closest('button')) e.targ
 
 window.addEventListener('keydown', e => {
   if (!$('#lyrModal').hidden) { if (e.key === 'Escape') closeSongLyrics(); return; }
+  if (!$('#impModal').hidden) { if (e.key === 'Escape') $('#impModal').hidden = true; return; }
+  if (!$('#syncModal').hidden) {
+    if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) syncTap(); }
+    else if (e.key === 'Backspace') { e.preventDefault(); sync.taps.pop(); renderSync(); }
+    else if (e.key === 'Escape') { syncStop(); $('#syncModal').hidden = true; }
+    return;
+  }
+  if (ui.fix && e.key === 'Escape') { ui.fix = null; render(); return; }
+  if (ui.rhy && e.key === 'Escape') { ui.rhy = null; render(); return; }
   const el = e.target;
   if (el.tagName === 'SELECT' || el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && !['range', 'checkbox'].includes(el.type))) return;
   const k = e.key.toLowerCase();
@@ -2796,6 +4102,7 @@ setDock(dockOpen);
 snapshot();
 setStatus();
 render();
+loadGuide();
 </script>
 </body>
 </html>
