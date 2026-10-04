@@ -1924,12 +1924,13 @@ function renderInspector() {
     const lab = document.createElement('b');
     lab.textContent = 'リズムを整える';
     box.append(lab,
-      segControl('強さ', [[1, '少し'], [2, 'しっかり'], [3, '歌詞で組む']], ui.rhy.level, v => { ui.rhy.level = v; updateRhythm(); }));
-    if (ui.rhy.level === 3) box.append(Object.assign(segControl('歌詞の1音を', [[0.5, '8分音符'], [1, '4分音符']], ui.rhy.unit || 0.5, v => { ui.rhy.unit = v; updateRhythm(); }),
-      { title: '歌詞の1音を、どの長さの音符として並べるか（どこまでを1拍とするか）。入りきらない行は、自動で細かい音符にします' }));
+      segControl('強さ', [[1, '少し'], [2, 'しっかり'], hasLyrics(sec) ? [3, '歌詞で組む'] : [4, '間で組む']], ui.rhy.level, v => { ui.rhy.level = v; updateRhythm(); }));
+    if (ui.rhy.level >= 3) box.append(Object.assign(segControl(ui.rhy.level === 3 ? '歌詞の1音を' : '1つの音を', [[0.5, '8分音符'], [1, '4分音符']], ui.rhy.unit || 0.5, v => { ui.rhy.unit = v; updateRhythm(); }),
+      { title: '1つの音を、どの長さの音符として並べるか（どこまでを1拍とするか）' }));
     box.append(
       hint((ui.rhy.level === 1 ? '音の始まりを8分音符にそろえ、短い隙間を埋めます' : ui.rhy.level === 2 ? '歌詞1行ごとに、音符の数を歌詞に合わせて形を整えます'
-        : '歌った時間ではなく、歌詞の音を順に並べます（走って歌った所に）。伸ばした音だけ長くし、歌詞の空白の所で区切ります')
+        : ui.rhy.level === 3 ? '歌った時間ではなく、歌詞の音を順に並べます（走って歌った所に）。伸ばした音だけ長くし、歌詞の空白の所で区切ります'
+        : `${secBeats(sec) / 4}小節 → ${ui.rhy.gap ? ui.rhy.gap.bars : '?'}小節。声の切れ目（間）で区切って音を順に並べ、コードは付け直します。曲全体に適用すると、テンポも歌った速さに合わせます`)
         + ` ／ 緑が整えた後（このパートの歌う音 ${before}→${after}${mora ? `・歌詞 ${mora}音` : ''}）。適用後も ↶ で戻せます`),
       Object.assign(document.createElement('div'), { className: 'spacer' }));
     const ok = smallButton('曲全体に適用', () => applyRhythm(true)); ok.className = 'primary';
@@ -3391,7 +3392,7 @@ function buildImportedSong(res, opts, fileName) {
     res.lines.filter(l => l.bi === bi).forEach((l, li) => {
       for (const n of l.notes || []) {
         if (n.b === undefined) continue;
-        const note = { t: li * bpl + n.b, d: n.e - n.b, m: n.p };
+        const note = { t: li * bpl + n.b, d: n.e - n.b, m: n.p, r: [+n.t0.toFixed(2), +n.t1.toFixed(2)] };   // r：歌った時刻（秒）。リズムを組み直すときに使う
         if (n.tie) note.tie = true;
         sec.melody.push(note);
       }
@@ -3733,7 +3734,56 @@ function moraGrid(src, sp, unit) {
   }
   return out;
 }
-// level  1：少し  2：しっかり  3：歌詞で組む（unit は刻み。0.5＝8分音符、1＝4分音符）
+// 間で組む（歌詞のないパート用）：声の切れ目（間）でまとまりに分け、まとまりの中は音を1つずつ順に並べて拍を決める。
+//   ・間の大きさは秒ではなく、前後の音の間隔と比べる（走って歌った所でも同じ基準になる）
+//   ・小さい間のあとは次の拍の頭から、大きい間のあとは次の小節の頭から始める
+//   ・はっきり伸ばした音だけ長くする。まとまりの最後の音は、次の入りの手前まで伸ばす
+//   ・パートの長さ（小節数）は、中身の量で決まる
+// 戻り値は { mel, guide, bars, ioi }（guide は元の歌の行の新しい位置、ioi は刻み1つあたりの歌った秒数の真ん中の値）。音の高さは変えない
+function gapGrid(sec, unit) {
+  const spans = lineSpans(sec), g = sec.guide || [], total = secBeats(sec), beat = 60 / song.bpm;
+  const src = [...sec.melody].filter(n => n.t < total).sort((a, b) => a.t - b.t || b.m - a.m);
+  if (!src.length) return null;
+  // 歌った時刻（秒）：読み込みのときに残した値があればそれを、なければ行の位置から逆算する
+  const useGuide = g.length > 0 && g.length === spans.length && g.every(x => x.t1 > x.t0);
+  const items = src.map(n => {
+    const li = Math.max(0, spans.findIndex(sp => n.t >= sp.s && n.t < sp.e)), sp = spans[li];
+    const f = useGuide ? (g[li].t1 - g[li].t0) / (sp.e - sp.s) : beat, base = useGuide ? g[li].t0 - sp.s * f : 0;
+    return { n, li, t0: base + n.t * f, t1: base + (n.t + n.d) * f };
+  });
+  if (items.every(x => Array.isArray(x.n.r)) && items.every((x, i) => !i || x.n.r[0] >= items[i - 1].n.r[0])) for (const x of items) [x.t0, x.t1] = x.n.r;
+  const N = items.length;
+  const ioi = items.map((x, i) => (items[i + 1] ? items[i + 1].t0 - x.t0 : x.t1 - x.t0));
+  const local = i => medOf(ioi.slice(Math.max(0, i - 3), Math.min(N - 1, i + 4)).filter(v => v > 0)) || 0.3;
+  // 間：0＝なし、1＝小さい（次の拍の頭から）、2＝大きい（次の小節の頭から）
+  const brk = items.map((x, i) => {
+    if (!items[i + 1]) return 2;
+    const gap = items[i + 1].t0 - x.t1, m = local(i);
+    return gap >= Math.max(0.6, 2 * m) ? 2 : gap >= Math.max(0.12, 0.5 * m) ? 1 : 0;
+  });
+  const slots = items.map((x, i) => { const r = ioi[i] / local(i); return r < 1.5 ? 1 : r < 2.5 ? 2 : r < 3.5 ? 3 : 4; });
+  const mel = [], unitIoi = [];
+  let pos = 0;
+  items.forEach((x, i) => {
+    let len;
+    if (!brk[i]) { len = slots[i] * unit; unitIoi.push(ioi[i] / slots[i]); }
+    else {
+      // まとまりの最後の音：次の入り（拍の頭／小節の頭）の手前まで伸ばす。ゆとりがあれば半拍あける
+      const next = brk[i] === 2 ? Math.ceil((pos + unit + 0.5) / 4 - 1e-9) * 4 : Math.ceil(pos + unit + 0.25 - 1e-9);
+      len = Math.max(unit, Math.min(4, next - pos - (next - pos >= 1.5 ? 0.5 : 0)));
+      mel.push({ ...x.n, t: pos, d: len });
+      pos = next;
+      return;
+    }
+    mel.push({ ...x.n, t: pos, d: len });
+    pos += len;
+  });
+  const bars = Math.max(1, Math.round(pos / 4));
+  // 元の歌の行：その行の最初の音の、新しい位置から鳴らす
+  const guide = g.length ? g.map((x, li) => { const k = items.findIndex(it => it.li === li); return { ...x, beat: k < 0 ? x.beat : mel[k].t }; }).sort((a, b) => a.beat - b.beat) : null;
+  return { mel, guide, bars, ioi: unitIoi.length ? medOf(unitIoi) : null };
+}
+// level  1：少し  2：しっかり  3：歌詞で組む（unit は刻み。0.5＝8分音符、1＝4分音符）  ※「間で組む」は gapGrid（パートの長さも変わるので別扱い）
 function rhythmFix(sec, level, unit = 0.5) {
   const q = x => Math.round(x * 2) / 2;
   const out = [];
@@ -3811,17 +3861,34 @@ function openRhythm() {
   ui.sel = -1; ui.note = -1;
   updateRhythm();
 }
+const hasLyrics = sec => (sec.verses || []).some(v => v && v.trim());
 function updateRhythm() {
-  ui.rhy.mel = rhythmFix(curSec(), ui.rhy.level, ui.rhy.unit || 0.5);
+  const sec = curSec(), unit = ui.rhy.unit || 0.5;
+  if (ui.rhy.level === 3 && !hasLyrics(sec)) ui.rhy.level = 4;      // 歌詞のないパートでは「歌詞で組む」の代わりに「間で組む」
+  if (ui.rhy.level === 4 && hasLyrics(sec)) ui.rhy.level = 3;
+  ui.rhy.gap = ui.rhy.level === 4 ? gapGrid(sec, unit) : null;
+  ui.rhy.mel = ui.rhy.gap ? ui.rhy.gap.mel : rhythmFix(sec, Math.min(3, ui.rhy.level), unit);
   render();
 }
 // all：メロディのあるパート全部を、同じ強さで整える
 function applyRhythm(all) {
+  const unit = ui.rhy.unit || 0.5, level = ui.rhy.level, iois = [];
   for (const sec of all ? toolSecs() : [curSec()]) {
-    sec.melody = sec === curSec() ? ui.rhy.mel : rhythmFix(sec, ui.rhy.level, ui.rhy.unit || 0.5);
+    // 歌詞のあるパートは「歌詞で組む」、ないパートは「間で組む」（組む系を選んだとき）
+    const lv = level >= 3 ? (hasLyrics(sec) ? 3 : 4) : level;
+    if (lv === 4) {
+      const r = sec === curSec() && ui.rhy.gap ? ui.rhy.gap : gapGrid(sec, unit);
+      if (!r) continue;
+      sec.melody = r.mel;
+      if (r.guide) sec.guide = r.guide;
+      harmonize(sec, r.bars);                               // 小節の数が変わるので、コードは付け直す
+      if (r.ioi) iois.push(r.ioi);
+    } else sec.melody = sec === curSec() && lv === level ? ui.rhy.mel : rhythmFix(sec, lv, unit);
     markDone(sec, 'rhy');
   }
-  ui.rhy = null;
+  // 曲全体を間で組んだときは、テンポも歌った速さに合わせる（刻み1つが、歌った音1つの長さになるように）
+  if (all && iois.length) song.bpm = Math.round(Math.min(180, Math.max(50, 60 * unit / medOf(iois))));
+  ui.rhy = null; ui.sel = -1; ui.note = -1;
   changed();
 }
 
