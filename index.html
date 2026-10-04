@@ -1924,8 +1924,12 @@ function renderInspector() {
     const lab = document.createElement('b');
     lab.textContent = 'リズムを整える';
     box.append(lab,
-      segControl('強さ', [[1, '少し'], [2, 'しっかり']], ui.rhy.level, v => { ui.rhy.level = v; updateRhythm(); }),
-      hint((ui.rhy.level === 1 ? '音の始まりを8分音符にそろえ、短い隙間を埋めます' : '歌詞1行ごとに、音符の数を歌詞に合わせて形を整えます')
+      segControl('強さ', [[1, '少し'], [2, 'しっかり'], [3, '歌詞で組む']], ui.rhy.level, v => { ui.rhy.level = v; updateRhythm(); }));
+    if (ui.rhy.level === 3) box.append(Object.assign(segControl('歌詞の1音を', [[0.5, '8分音符'], [1, '4分音符']], ui.rhy.unit || 0.5, v => { ui.rhy.unit = v; updateRhythm(); }),
+      { title: '歌詞の1音を、どの長さの音符として並べるか（どこまでを1拍とするか）。入りきらない行は、自動で細かい音符にします' }));
+    box.append(
+      hint((ui.rhy.level === 1 ? '音の始まりを8分音符にそろえ、短い隙間を埋めます' : ui.rhy.level === 2 ? '歌詞1行ごとに、音符の数を歌詞に合わせて形を整えます'
+        : '歌った時間ではなく、歌詞の音を順に並べます（走って歌った所に）。伸ばした音だけ長くし、歌詞の空白の所で区切ります')
         + ` ／ 緑が整えた後（このパートの歌う音 ${before}→${after}${mora ? `・歌詞 ${mora}音` : ''}）。適用後も ↶ で戻せます`),
       Object.assign(document.createElement('div'), { className: 'spacer' }));
     const ok = smallButton('曲全体に適用', () => applyRhythm(true)); ok.className = 'primary';
@@ -3644,18 +3648,96 @@ function applyFix(all) {
 function lineSpans(sec) {
   const total = secBeats(sec);
   const lines = parseLyrics(verseText(sec), song.lyrExt).lines.filter(l => l.mora.length);
+  // 行の中の区切り（歌詞の空白で分けた、まとまりごとの音の数）
+  for (const l of lines) l.parts = l.text.split(/[\s　]+/).map(t => parseLyrics(t, song.lyrExt).all.length).filter(c => c > 0);
   const g = sec.guide || [];
   if (lines.length && g.length === lines.length)
-    return lines.map((l, i) => ({ s: g[i].beat, e: i + 1 < g.length ? g[i + 1].beat : total, mora: l.mora.length }));
+    return lines.map((l, i) => ({ s: g[i].beat, e: i + 1 < g.length ? g[i + 1].beat : total, mora: l.mora.length, parts: l.parts }));
   if (lines.length && total % lines.length === 0)
-    return lines.map((l, i) => ({ s: i * total / lines.length, e: (i + 1) * total / lines.length, mora: l.mora.length }));
+    return lines.map((l, i) => ({ s: i * total / lines.length, e: (i + 1) * total / lines.length, mora: l.mora.length, parts: l.parts }));
   if (!lines.length && g.length)                            // 歌詞なし：歌ったフレーズの区切りで（音の数は変えない）
     return g.map((x, i) => ({ s: x.beat, e: i + 1 < g.length ? g[i + 1].beat : total, mora: null }));
   return [{ s: 0, e: total, mora: lines.reduce((a, l) => a + l.mora.length, 0) || null }];
 }
-function rhythmFix(sec, level) {
+// 歌詞で組む：歌った時間ではなく、歌詞の音の並びで拍を決める（走って歌った所・途中だけ速くなった所でも崩れない）。
+//   ・歌詞の1音を、刻み unit（8分音符＝0.5、4分音符＝1）1つとして、順に並べる
+//   ・はっきり伸ばした音だけ長くする。伸ばしたかどうかは、その前後の音の長さと比べて決める（途中で速さが変わっても比べられる）
+//   ・歌詞の空白で区切ったまとまりは、小節や拍の頭から始め、まとまりの最後の音を次のまとまりの手前まで伸ばす
+// 音の高さは変えない。入りきらない行は null を返す（呼び出し側で「しっかり」と同じ整え方にする）
+function moraGrid(src, sp, unit) {
+  const B = sp.e - sp.s;
+  const ns = src.map(n => ({ ...n }));
+  // 音符の数を歌詞の音の数に合わせる（足りなければ長い音を分け、多ければ前の音と高さが近い短い音を「のばし」に）
+  const sung = () => ns.filter(n => !n.tie).length;
+  while (sung() < sp.mora) {
+    const i = ns.reduce((b, n, k) => (n.d > ns[b].d ? k : b), 0), n = ns[i];
+    if (n.d < 0.2) break;
+    ns.splice(i + 1, 0, { ...n, t: n.t + n.d / 2, d: n.d / 2, tie: false });
+    n.d /= 2;
+  }
+  while (sung() > sp.mora) {
+    let best = -1, score = Infinity;
+    ns.forEach((n, k) => { if (!k || n.tie) return; const sc = n.d * 4 + Math.abs(n.m - ns[k - 1].m) * 0.5; if (sc < score) { score = sc; best = k; } });
+    if (best < 0) break;
+    ns[best].tie = true;
+  }
+  if (ns[0].tie) ns[0].tie = false;
+  // 歌う音ごとのまとまり（その音と、続く「のばし」）
+  const gs = [];
+  for (const n of ns) { if (n.tie && gs.length) gs[gs.length - 1].ties.push(n); else gs.push({ n, ties: [] }); }
+  // 伸ばした音：次の音までの間隔を、前後3つずつの間隔の真ん中の値と比べる
+  const ioi = gs.map((g, i) => (gs[i + 1] ? gs[i + 1].n.t - g.n.t : 0));
+  const slots = gs.map((g, i) => {
+    if (!gs[i + 1]) return 1;
+    const w = ioi.slice(Math.max(0, i - 3), Math.min(gs.length - 1, i + 4));
+    const r = ioi[i] / (medOf(w) || 1);
+    return r < 1.5 ? 1 : r < 2.5 ? 2 : r < 3.5 ? 3 : 4;
+  });
+  // まとまり（歌詞の空白で区切る）
+  const parts = sp.parts && sp.parts.length > 1 && sp.parts.reduce((a, c) => a + c, 0) === gs.length ? sp.parts : [gs.length];
+  const K = parts.length, first = [];
+  parts.reduce((a, c) => (first.push(a), a + c), 0);
+  // 並べ方を、ゆとりのある順に試す：まとまりの頭を 小節 → 半小節 → 拍 → 刻み にそろえる。入らなければ、伸ばしをやめる → 刻みを半分に
+  const tryLayout = (u, sl, snap) => {
+    const need = k => { let v = 0; for (let i = first[k]; i < first[k] + parts[k] - 1; i++) v += sl[i] * u; return v + u; };   // 最後の音は最低1刻み
+    const starts = [0];
+    for (let k = 1; k < K; k++) {
+      const earliest = Math.ceil((starts[k - 1] + need(k - 1) + (snap > u ? u : 0)) / snap - 1e-9) * snap;
+      const even = Math.round(k * B / K / snap) * snap;                       // 行の中に均等に置いたときの位置
+      let tail = 0; for (let j = k; j < K; j++) tail += need(j);
+      starts.push(even >= earliest && even + tail <= B ? even : earliest);
+    }
+    return starts[K - 1] + need(K - 1) <= B + 1e-9 ? starts : null;
+  };
+  let u = unit, sl = slots, starts = null;
+  outer: for (const uu of [unit, unit / 2, unit / 4].filter(x => x >= 0.25)) for (const s2 of [slots, slots.map(() => 1)]) for (const snap of [4, 2, 1, uu]) {
+    if (snap < uu) continue;
+    const st = tryLayout(uu, s2, snap);
+    if (st) { u = uu; sl = s2; starts = st; break outer; }
+  }
+  if (!starts) return null;
+  const out = [];
+  for (let k = 0; k < K; k++) {
+    let pos = starts[k];
+    const end = k + 1 < K ? starts[k + 1] : B;
+    for (let i = first[k]; i < first[k] + parts[k]; i++) {
+      const lastOf = i === first[k] + parts[k] - 1;
+      // まとまりの最後の音は、次のまとまり（行の終わり）の半拍前まで伸ばす（最大1小節）
+      const len = lastOf ? Math.max(u, Math.min(4, end - Math.min(0.5, (end - pos) / 2) - pos)) : sl[i] * u;
+      const g = gs[i], cnt = Math.min(g.ties.length, Math.round(len / 0.25) - 1);   // 「のばし」の音は、その音の長さの中に等分して置く
+      const step = Math.max(0.25, Math.round(len / (cnt + 1) * 4) / 4);
+      out.push({ ...g.n, t: sp.s + pos, d: cnt ? step : len });
+      for (let j = 0; j < cnt; j++) out.push({ ...g.ties[j], t: sp.s + pos + step * (j + 1), d: j === cnt - 1 ? Math.max(0.25, len - step * (j + 1)) : step, tie: true });
+      pos += lastOf ? len : sl[i] * u;
+    }
+  }
+  return out;
+}
+// level  1：少し  2：しっかり  3：歌詞で組む（unit は刻み。0.5＝8分音符、1＝4分音符）
+function rhythmFix(sec, level, unit = 0.5) {
   const q = x => Math.round(x * 2) / 2;
   const out = [];
+  if (level === 3) level = 2.5;                             // 歌詞で組めない行は、「しっかり」と同じ整え方にする
   for (const sp of lineSpans(sec)) {
     // のばし（tie）は前の音の続きとしてまとめ、行の中の音を時間順に
     let ns = [];
@@ -3664,6 +3746,10 @@ function rhythmFix(sec, level) {
       ns.push({ ...n });
     }
     if (!ns.length) continue;
+    if (level === 2.5 && sp.mora) {
+      const placed = moraGrid(ns, sp, unit);
+      if (placed) { out.push(...placed); continue; }
+    }
     // 始まりを8分音符の位置へ。同じ位置に重なったら後ろへずらす（入らなければ16分）。行の外へは出さない
     let prev = -1;
     for (const n of ns) {
@@ -3726,13 +3812,13 @@ function openRhythm() {
   updateRhythm();
 }
 function updateRhythm() {
-  ui.rhy.mel = rhythmFix(curSec(), ui.rhy.level);
+  ui.rhy.mel = rhythmFix(curSec(), ui.rhy.level, ui.rhy.unit || 0.5);
   render();
 }
 // all：メロディのあるパート全部を、同じ強さで整える
 function applyRhythm(all) {
   for (const sec of all ? toolSecs() : [curSec()]) {
-    sec.melody = sec === curSec() ? ui.rhy.mel : rhythmFix(sec, ui.rhy.level);
+    sec.melody = sec === curSec() ? ui.rhy.mel : rhythmFix(sec, ui.rhy.level, ui.rhy.unit || 0.5);
     markDone(sec, 'rhy');
   }
   ui.rhy = null;
