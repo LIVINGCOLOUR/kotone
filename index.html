@@ -3553,6 +3553,8 @@ function noteEvs(evs, ch, m, t, d, vel) {
 function exportMidi() {
   const plan = buildPlan(song.arrangement.length ? song.arrangement : song.sections.map(s => s.id));
   if (!plan.total) { alert('書き出すコードがありません'); return; }
+  const fname = askFileName('MIDI');
+  if (fname === null) return;
   const tempo = Math.round(60000000 / song.bpm);
   const cond = [meta(0, 0x51, [(tempo >> 16) & 255, (tempo >> 8) & 255, tempo & 255]), meta(0, 0x58, [4, 2, 24, 8])];
   plan.markers.forEach(mk => cond.push(meta(Math.round(mk.t * 480), 0x06, utf8(mk.name))));
@@ -3577,9 +3579,16 @@ function exportMidi() {
     tracks.push(track('Drums', dr));
   }
   const bytes = [...ascii('MThd'), ...u32(6), 0, 1, 0, tracks.length, 480 >> 8, 480 & 255, ...tracks.flat()];
-  download(new Blob([new Uint8Array(bytes)], { type: 'audio/midi' }), song.title + '.mid');
+  download(new Blob([new Uint8Array(bytes)], { type: 'audio/midi' }), fname + '.mid');
 }
 
+// 書き出す前に、ファイルの名前を聞く（初めは曲名）。キャンセルしたら null。拡張子は付けて返さない
+function askFileName(what) {
+  const def = song.title || '無題の曲';
+  const n = prompt(`${what}のファイルの名前を決めてください`, def);
+  if (n === null) return null;
+  return n.replace(/\.(mid|mp3|wav|json|musicxml)$/i, '').replace(/[\\/:*?"<>|]/g, '_').trim() || def;
+}
 function download(blob, name) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -3593,6 +3602,8 @@ function download(blob, name) {
 async function exportAudio() {
   const plan = buildPlan(song.arrangement.length ? song.arrangement : song.sections.map(s => s.id));
   if (!plan.total) { alert('コードが入ったセクションがありません。'); return; }
+  const name = askFileName('音声（MP3）');                // 音声を作る前に聞く
+  if (name === null) return;
   const say = t => { $('#status').textContent = t; };
   audio();
   say('音源を読み込み中…');
@@ -3625,7 +3636,6 @@ async function exportAudio() {
     buf = await off.startRendering();
   } catch (e) { alert('音声を作れませんでした：' + e.message); setStatus(); return; }
   say('MP3 に変換しています…');
-  const name = song.title || '無題の曲';
   try {
     download(await encodeMp3(buf), name + '.mp3');
   } catch (e) {                                           // MP3 の変換部品を読めないとき（オフラインなど）は WAV で
@@ -3739,6 +3749,7 @@ function openLyricCard() {
     border-bottom: 1px solid #ddd; font-size: 14px; }
   .bar button { font: inherit; padding: 6px 14px; border-radius: 8px; border: 1px solid #d9485f; background: #d9485f; color: #fff; cursor: pointer; }
   .bar .small { color: #888; font-size: 12px; }
+  .bar input:not([type]) { font: inherit; padding: 5px 8px; border: 1px solid #ccc; border-radius: 8px; }
   .page { position: relative; width: 210mm; min-height: 297mm; margin: 16px auto; padding: 19mm 16mm 16mm; overflow: hidden; background: #fffaf6;
     box-shadow: 0 2px 12px rgba(0,0,0,.15); }
   @media print { body { background: none; } .bar { display: none; } .page { margin: 0; box-shadow: none; } }
@@ -3766,6 +3777,7 @@ function openLyricCard() {
   .v[hidden] { display: none; }
 </style></head><body>
 <div class="bar"><label><input type="checkbox" id="kana"> ひらがなにする</label><label><input type="checkbox" id="chords" checked> コードを書く</label>
+  <label>名前 <input id="fname" size="18"></label>
   <button onclick="print()">印刷・PDFに保存</button><span class="small">PDFにするときは、印刷の画面で「送信先：PDFに保存」を選んでください</span></div>
 <div class="page"><div class="rainbow"></div><div class="dot d1"></div><div class="dot d2"></div>
   <header><span class="note">♪</span><h1>${title}</h1><span class="note">♪</span>
@@ -3777,6 +3789,9 @@ function openLyricCard() {
   const sw = () => { vKanji.hidden = kana.checked; vKana.hidden = !kana.checked;
     document.querySelectorAll('.ch, .only').forEach(e => e.style.visibility = chords.checked ? '' : 'hidden'); };
   kana.onchange = sw; chords.onchange = sw;
+  // 名前は PDF に保存するときのファイル名になる（タブの題名が初めの名前になるため）
+  fname.value = document.title = ${JSON.stringify((song.title || '無題の曲') + '_歌詞カード').replace(/</g, '\\u003c')};
+  fname.oninput = () => { document.title = fname.value.trim() || '歌詞カード'; };
 <\/script></body></html>`;
   const w = window.open('', '_blank');
   if (!w) { alert('新しいタブを開けませんでした。ポップアップを許可してください。'); return; }
@@ -3925,6 +3940,7 @@ function openScore() {
   .bar button { font: inherit; padding: 6px 14px; border-radius: 8px; border: 1px solid #d9485f; background: #d9485f; color: #fff; cursor: pointer; }
   .bar button.sub { background: #fff; color: #d9485f; }
   .bar .small { color: #888; font-size: 12px; }
+  .bar input:not([type]) { font: inherit; padding: 5px 8px; border: 1px solid #ccc; border-radius: 8px; }
   .pg { width: 210mm; height: 297mm; margin: 16px auto; overflow: hidden; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.15); page-break-after: always; }
   .pg:last-child { page-break-after: auto; }
   .pg svg { width: 210mm; height: 297mm; display: block; }
@@ -3934,6 +3950,7 @@ function openScore() {
   @media print { body { background: none; } .bar, #msg { display: none; } .pg { margin: 0; box-shadow: none; } }
 </style></head><body>
 <div class="bar"><label><input type="checkbox" id="lyr" checked> 歌詞を入れる</label>
+  <label>名前 <input id="fname" size="18"></label>
   <button onclick="print()">印刷・PDFに保存</button>
   <button class="sub" id="xml" title="MuseScore などの楽譜ソフトで開いて、さらに直せます">楽譜ソフト用に保存（MusicXML）</button>
   <span class="small">PDFにするときは、印刷の画面で「送信先：PDFに保存」を選んでください</span></div>
@@ -3958,8 +3975,13 @@ function openScore() {
   document.getElementById('xml').onclick = () => {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([cur()], { type: 'application/vnd.recordare.musicxml+xml' }));
-    a.download = DATA.title + '.musicxml'; a.click();
+    a.download = fname.value.trim() + '.musicxml'; a.click();
   };
+  // 名前は PDF に保存するときのファイル名にもなる（タブの題名が初めの名前になるため）
+  const fname = document.getElementById('fname');
+  fname.value = DATA.title + '_ピアノ譜';
+  fname.oninput = () => { document.title = fname.value.trim() || DATA.title; };
+  document.title = fname.value;
 <\/script></body></html>`;
   const w = window.open('', '_blank');
   if (!w) { alert('新しいタブを開けませんでした。ポップアップを許可してください。'); return; }
@@ -4136,7 +4158,11 @@ $('#copyText').onclick = async () => {
   catch (e) { prompt('コピーしてください', chordText()); }
   setTimeout(setStatus, 2000);
 };
-$('#saveJson').onclick = () => { closeMenu(); download(new Blob([JSON.stringify(song, null, 2)], { type: 'application/json' }), song.title + '.json'); };
+$('#saveJson').onclick = () => {
+  closeMenu();
+  const fname = askFileName('曲');
+  if (fname !== null) download(new Blob([JSON.stringify(song, null, 2)], { type: 'application/json' }), fname + '.json');
+};
 $('#loadJson').onclick = () => { closeMenu(); $('#file').click(); };
 $('#file').onchange = async e => {
   const f = e.target.files[0];
