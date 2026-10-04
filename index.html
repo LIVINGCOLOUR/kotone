@@ -1926,7 +1926,7 @@ function renderInspector() {
     box.append(lab,
       segControl('強さ', [[1, '弱'], [2, '中'], [3, '強']], ui.fix.level, v => { ui.fix.level = v; ui.fix.skip = new Set(); updateFix(); }),
       hint((L.length ? `このパートは${use.length}音を直します（${Object.entries(by).map(([k, v]) => k + v).join('・')}）／ 緑が直した後。クリックで1音ずつ外せます` : 'このパートに直す所はありません')
-        + ` ／ 曲全体では${ui.fix.all}音`),
+        + ` ／ 曲全体では${ui.fix.all}音` + (ui.fix.level >= 2 ? '。中・強は、歌った節を変えることが多いので、聴き比べて決めてください' : '')),
       Object.assign(document.createElement('div'), { className: 'spacer' }));
     const ok = smallButton('曲全体に適用', () => applyFix(true)); ok.className = 'primary'; ok.disabled = !ui.fix.all;
     ok.title = 'メロディのあるパート全部を、この強さで直します（このパートで外した音は直しません）';
@@ -3539,7 +3539,7 @@ function openFix() {
   const sec = curSec();
   if (!sec.chords.length || !sec.melody.length) { alert('コードとメロディがあるセクションで使えます。'); return; }
   ui.rhy = null;
-  ui.fix = { level: ui.fix?.level || 2, list: [], skip: new Set() };
+  ui.fix = { level: ui.fix?.level || 1, list: [], skip: new Set() };   // 初めは「弱」。中・強は、合っている音まで動かすことが多い（tests/README.md）
   ui.sel = -1; ui.note = -1;
   updateFix();
 }
