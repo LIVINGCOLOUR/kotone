@@ -1680,11 +1680,12 @@ function changed() { save(); snapshot(); render(); }
 // 済みの印：セクションごとの sec.done.rhy（リズム）・sec.done.fix（音程）、曲の song.steps.sync（歌詞の位置）・song.steps.out（書き出し）
 function markDone(sec, k) { sec.done = { ...(sec.done || {}), [k]: true }; }
 function markStep(k) { song.steps = { ...(song.steps || {}), [k]: true }; }
-// まだ済んでいないセクション（今のセクションを優先）へ移ってから、その道具を開く
+// 今選んでいるセクションで、その道具を開く（済んでいても、勝手にほかのセクションへは移らない）。
+// 今のセクションにメロディがないときだけ、まだ済んでいないセクションへ移る
 function guideOpen(k, open) {
   const secs = song.sections.filter(x => x.melody.length && x.chords.length);
   const cur = curSec();
-  const target = !cur.done?.[k] && secs.includes(cur) ? cur : secs.find(x => !x.done?.[k]) || cur;
+  const target = secs.includes(cur) ? cur : secs.find(x => !x.done?.[k]) || cur;
   if (target.id !== song.current) selectSection(target.id);
   open();
 }
@@ -1719,8 +1720,8 @@ function renderGuide() {
     step('lyr', song.sections.some(x => (x.verses || []).some(v => v && v.trim())),
       btn('歌詞を入れる', '元の歌を聞き取って、右の「歌詞」に入れます（歌ったフレーズ1つを1行に）。入れなくても曲にはなります', () => { setSideTab('lyrics'); $('#lyrics').focus(); }));
   else step('sync', !!st.sync, Object.assign(btn('歌詞を合わせる', '歌っている所と歌詞がずれているときに。元の歌を聞きながら、各行の歌い出しで Space を押します', openSync), { disabled: !hasGuide }));
-  step('rhy', rhyDone, btn(`リズムを整える ${cnt('rhy')}/${secs.length}`, 'セクションごとに、音の始まりと長さをそろえます。押すと、まだのセクションへ移ります', () => guideOpen('rhy', openRhythm)));
-  step('fix', fixDone, btn(`音程を整える ${cnt('fix')}/${secs.length}`, 'セクションごとに、コードとぶつかる音・キーから外れた音を直します。押すと、まだのセクションへ移ります', () => guideOpen('fix', openFix)));
+  step('rhy', rhyDone, btn(`リズムを整える ${cnt('rhy')}/${secs.length}`, '今選んでいるセクションの、音の始まりと長さをそろえます。セクションごとに行います（数字は、済んだセクションの数）', () => guideOpen('rhy', openRhythm)));
+  step('fix', fixDone, btn(`音程を整える ${cnt('fix')}/${secs.length}`, '今選んでいるセクションの、コードとぶつかる音・キーから外れた音を直します。セクションごとに行います（数字は、済んだセクションの数）', () => guideOpen('fix', openFix)));
   if (hasGuide) step('listen', false, segControl('聴き比べる', [['song', 'できた曲'], ['guide', '元の歌'], ['both', '両方']], listenMode(), setListen));
   step('out', !!st.out,
     btn('MP3', '曲全体を音声（MP3）で書き出します', exportAudio),
