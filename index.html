@@ -144,6 +144,7 @@
   .sidetabs button + button { border-left: 1px solid var(--border); }
   .sidetabs button.on { background: var(--accent); color: #fff; }
   .panel { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  [hidden] { display: none !important; }                  /* display を指定した要素でも、hidden なら必ず隠す */
   .panel[hidden] { display: none; }
   #lyrics { flex: 1; min-height: 120px; margin-top: 8px; resize: none; font: inherit; font-size: 14px; line-height: 1.8;
     padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
@@ -2037,6 +2038,8 @@ function renderRoll() {
   if (!total) {
     c2.fillStyle = col('--muted'); c2.font = '12px system-ui, sans-serif';
     c2.fillText('コードを置くと、ここでメロディを編集できます（クリックで音を追加、Shift+R で録音）', 12, box.scrollTop + 24);
+    renderLane(g);                                         // 歌詞の行と目盛りも空にする（前の曲の表示を残さない）
+    renderRuler(g);
     return;
   }
   const key = secKey(sec);
