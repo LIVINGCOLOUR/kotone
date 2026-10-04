@@ -103,6 +103,9 @@
   /* コードトラックとピアノロールは同じ横スクロールの中に置き、時間軸をそろえる */
   .lane { flex: 1; min-height: 160px; display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-top: 8px; }
   .gutter { width: 44px; flex: none; display: flex; flex-direction: column; border-right: 1px solid var(--border); background: var(--chip); }
+  .gut-ruler { height: 20px; flex: none; font-size: 10px; color: var(--muted); display: grid; place-items: center; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .gut-ruler:hover { color: var(--accent); }
+  #ruler { display: block; height: 20px; flex: none; border-bottom: 1px solid var(--border); cursor: pointer; }
   .gut-track { height: 56px; flex: none; font-size: 11px; color: var(--muted); display: grid; place-items: center; border-bottom: 1px solid var(--border); }
   .gut-lyr { height: 32px; flex: none; font-size: 11px; color: var(--muted); display: grid; place-items: center; border-bottom: 1px solid var(--border); }
   #lane { display: block; height: 32px; flex: none; border-bottom: 1px solid var(--border); cursor: pointer; }
@@ -318,6 +321,7 @@
     <div class="row" id="arrange"></div>
     <select id="addArr"></select>
     <div class="spacer"></div>
+    <button id="newBtn" title="今の曲を閉じて、新しい曲を始めます。歌詞と録音も空になります">＋ 新しい曲</button>
     <button id="voiceBtn" class="voice-btn" title="歌詞を見ながら自由に歌った録音から、メロディとコードを作ります">🎤 歌から作る…</button>
     <details class="menu" id="fileMenu">
       <summary>ファイル ▾</summary>
@@ -330,7 +334,7 @@
         <button id="saveJson">ファイルに保存</button>
         <button id="loadJson">ファイルを開く</button>
         <button id="importVoice">ボイスメモを読み込む…</button>
-        <button id="newSong">新規</button>
+        <button id="newSong">新しい曲を始める</button>
       </div>
     </details>
     <a class="manual-link" href="manual.html" target="_blank">使い方 ↗</a>
@@ -366,11 +370,13 @@
       </div>
       <div class="lane">
         <div class="gutter">
+          <div class="gut-ruler" id="startReset" title="再生を始める位置を、セクションの頭に戻します">▶</div>
           <div class="gut-track">コード</div>
           <div class="gut-lyr">歌詞</div>
           <div class="gut-keys"><canvas id="rollKeys"></canvas></div>
         </div>
         <div class="scroller" id="scroller">
+          <canvas id="ruler" title="クリック（ドラッグ）した位置から再生します。数字は小節。再生中に押すと、そこから鳴らし直します"></canvas>
           <div class="track" id="track"></div>
           <canvas id="lane" title="クリックでその音を選択、ダブルクリックで「のばし（ー）」を切り替え"></canvas>
           <div class="rollbox" id="rollbox"><canvas id="roll"></canvas></div>
@@ -1148,7 +1154,8 @@ function buildPlan(ids, fixedVerse) {
 
 let playback = null;
 
-function play(kind, lead = 0) {
+// from：開始位置の印（ui.start）から再生する。録音・鼻歌のときは、いつもセクションの頭から
+function play(kind, lead = 0, from = true) {
   if (playback) {
     const same = playback.kind === kind;
     stop();
@@ -1156,36 +1163,44 @@ function play(kind, lead = 0) {
   }
   audio();
   const out = ctx.createGain(); out.connect(master);
-  playback = { kind, out, timers: [], passes: [] };
+  playback = { kind, out, timers: [], passes: [], from };
   if (!schedulePass(ctx.currentTime + 0.1 + lead)) { playback = null; return; }
   updateButtons();
   requestAnimationFrame(tick);
 }
 
 // 1周分を予約する。ループ時は終わる直前に次の周を作り直すので、再生中の編集も次の周から反映される
-function schedulePass(t0) {
+// at は音が鳴り始める時刻。開始位置の印があれば、そこから鳴らす（t0 は、その周の頭にあたる時刻）
+function schedulePass(at) {
   const pb = playback;
   const plan = pb.kind === 'song' ? buildPlan(song.arrangement) : buildPlan([song.current], ui.verse);
   if (!plan.total) return false;
   const beat = 60 / song.bpm;
+  const mk0 = pb.from && ui.start ? plan.markers.find(m => m.sid === ui.start.sec) : null;
+  let off = mk0 ? mk0.t + ui.start.beat : 0;               // 開始位置（拍）
+  if (off >= plan.total) off = 0;
+  const t0 = at - off * beat;
   pb.passes.push({ t0, beat, plan });
   const hasGuide = song.guideOn && guide.buffer && guide.id === song.guideId;
   const only = hasGuide && song.guideOnly;                 // 元の歌だけを聴く（伴奏とメロディは鳴らさない）
   for (const e of plan.evs) {
-    if (!only) renderChord(pb.out, e.v, t0 + e.t * beat, e.beats, beat, song.pattern);
+    if (e.t + e.beats <= off) continue;
+    const st = Math.max(e.t, off);                         // 途中から始めるコードは、残りの長さだけ鳴らす
+    if (!only) renderChord(pb.out, e.v, t0 + st * beat, e.t + e.beats - st, beat, song.pattern);
     pb.timers.push(setTimeout(() => onChordStart(e), Math.max(0, (t0 + e.t * beat - ctx.currentTime) * 1000)));
   }
-  if (song.drums && !only) for (const h of drumHits(plan.total)) DRUM[h.n](pb.out, t0 + h.t * beat, h.v);
-  if (!only) for (const n of plan.mel) note(pb.out, n.m, t0 + n.t * beat, n.d * beat, 0.6);
+  if (song.drums && !only) for (const h of drumHits(plan.total)) if (h.t >= off) DRUM[h.n](pb.out, t0 + h.t * beat, h.v);
+  if (!only) for (const n of plan.mel) if (n.t >= off - 1e-6) note(pb.out, n.m, t0 + n.t * beat, n.d * beat, 0.6);
   // 元の歌：行ごとに、その行の始まりに合わせて録音の該当部分を鳴らす（行の中は歌ったままのテンポ）
   if (hasGuide) {
     for (const mk of plan.markers) for (const g of secById(mk.sid)?.guide || []) {
-      const at = t0 + (mk.t + g.beat) * beat;
-      if (at < ctx.currentTime - 0.05) continue;
+      const ga = t0 + (mk.t + g.beat) * beat, dur = g.t1 - g.t0 + 0.05;
+      const skip = Math.max(0, at - ga);                   // 行の途中から始めるときは、その分だけ先から
+      if (skip >= dur) continue;
       const src = ctx.createBufferSource(), gn = ctx.createGain();
       src.buffer = guide.buffer; gn.gain.value = 1.1;
       src.connect(gn).connect(pb.out);
-      src.start(at, Math.max(0, g.t0 - 0.05), g.t1 - g.t0 + 0.05);
+      src.start(ga + skip, Math.max(0, g.t0 - 0.05) + skip, dur - skip);
     }
   }
   const end = t0 + plan.total * beat;
@@ -1392,7 +1407,7 @@ async function toggleHum() {
   if (playback) stop();
   ui.recording = false;
   const beat = 60 / song.bpm;
-  play('section', 4 * beat);                      // 1小節のカウントのあとにセクションが始まる
+  play('section', 4 * beat, false);               // 1小節のカウントのあとにセクションが始まる
   if (!playback) return;
   const p = playback.passes[0];
   for (let i = 0; i < 4; i++) note(master, i ? 84 : 96, p.t0 - (4 - i) * beat, 0.08, 0.5);  // カウントの音
@@ -2112,6 +2127,12 @@ function renderRoll() {
     const last = ui.humTrail[ui.humTrail.length - 1];
     c2.beginPath(); c2.arc(last.b * ppb, (hi - last.m + 0.5) * rowH, 6, 0, Math.PI * 2); c2.fill();
   }
+  // 再生を始める位置
+  if (ui.start && ui.start.sec === sec.id && ui.start.beat < total) {
+    c2.strokeStyle = '#1f9d55'; c2.lineWidth = 2; c2.setLineDash([5, 4]);
+    c2.beginPath(); c2.moveTo(ui.start.beat * ppb + 1, 0); c2.lineTo(ui.start.beat * ppb + 1, H); c2.stroke();
+    c2.setLineDash([]); c2.lineWidth = 1;
+  }
   // 再生位置
   if (ui.playhead && ui.playhead.sec === sec.id) {
     const x = ui.playhead.beat * ppb;
@@ -2121,9 +2142,50 @@ function renderRoll() {
     if (x < sc.scrollLeft || x > sc.scrollLeft + sc.clientWidth - 20) sc.scrollLeft = Math.max(0, x - 40);
   }
   renderLane(g);
+  renderRuler(g);
 }
 
 // ---- 歌詞レーン：各音符の真上に、その音で歌う歌詞を並べる。まだ音符のない歌詞は最後の音の後ろに薄く予告する ----
+// 小節の目盛り。クリックした位置が、再生を始める位置（ui.start）になる
+function renderRuler(g = rollGeom()) {
+  const cv = $('#ruler'), dpr = window.devicePixelRatio || 1, W = g.W, H = 20;
+  cv.style.width = W + 'px';
+  cv.width = W * dpr; cv.height = H * dpr;
+  const c2 = cv.getContext('2d');
+  c2.scale(dpr, dpr);
+  const css = getComputedStyle(document.documentElement);
+  const col = n => css.getPropertyValue(n).trim();
+  c2.fillStyle = col('--chip'); c2.fillRect(0, 0, W, H);
+  if (!g.total) return;
+  c2.font = '10px system-ui, sans-serif'; c2.textBaseline = 'middle';
+  for (let b = 0; b < g.total; b++) {
+    const x = Math.round(b * g.ppb) + 0.5;
+    c2.strokeStyle = col('--grid-strong');
+    c2.beginPath(); c2.moveTo(x, b % 4 ? H - 4 : 0); c2.lineTo(x, H); c2.stroke();
+    if (b % 4 === 0) { c2.fillStyle = col('--muted'); c2.fillText(b / 4 + 1, x + 4, H / 2); }
+  }
+  const st = ui.start && ui.start.sec === g.sec.id ? ui.start.beat : null;
+  if (st !== null && st < g.total) {
+    const x = st * g.ppb;
+    c2.fillStyle = '#1f9d55';
+    c2.fillRect(x, 0, 2, H);
+    c2.beginPath(); c2.moveTo(x + 2, 3); c2.lineTo(x + 12, H / 2); c2.lineTo(x + 2, H - 3); c2.fill();
+  }
+}
+function setStart(beat) {
+  const sec = curSec();
+  ui.start = beat === null ? null : { sec: sec.id, beat };
+  if (playback && playback.from) { const k = playback.kind; stop(); play(k); }   // 再生中なら、そこから鳴らし直す
+  else renderRoll();
+}
+function rulerDown(e) {
+  const g = rollGeom();
+  if (!g.total) return;
+  const beat = Math.max(0, Math.min(g.total - 1, Math.round((e.clientX - $('#ruler').getBoundingClientRect().left) / g.ppb)));
+  if (ui.start && ui.start.sec === g.sec.id && ui.start.beat === beat && e.type !== 'pointerdown') return;
+  setStart(beat);
+}
+
 function renderLane(g = rollGeom()) {
   const cv = $('#lane'), dpr = window.devicePixelRatio || 1, W = g.W, H = 32;
   cv.style.width = W + 'px';
@@ -3125,8 +3187,10 @@ function buildImportedSong(res, opts, fileName) {
 // ---- 読み込みの画面 ----
 function openImport() {
   closeMenu();
-  const has = song.sections.some(s => (s.verses || []).some(v => v && v.trim()));
-  if (!$('#impLyrics').value.trim() && has) $('#impLyrics').value = songLyricsText();
+  if (!impRec.dirty) {                                     // 歌詞の欄は、いつも今の曲のもの（打ちかけのときだけ残す）
+    const has = song.sections.some(s => (s.verses || []).some(v => v && v.trim()));
+    $('#impLyrics').value = song.importInfo ? song.importInfo.lyrics || '' : has ? songLyricsText() : '';
+  }
   $('#impMsg').textContent = '';
   impRecRender();
   $('#impModal').hidden = false;
@@ -3201,6 +3265,12 @@ function impRecStop(discard = false) {
   impRec.actx?.close();
   cancelAnimationFrame(impRec.raf);
 }
+function resetImport() {
+  impRecStop(true);
+  impRec.file = null; impRec.dirty = false;
+  $('#impFile').value = ''; $('#impLyrics').value = ''; $('#impAudio').removeAttribute('src');
+  impRecRender();
+}
 function closeImport() { impRecStop(true); $('#impAudio').pause(); $('#impModal').hidden = true; }
 async function runImport() {
   if (impRec.rec) { alert('録音を止めてから読み込んでください。'); return; }
@@ -3214,7 +3284,7 @@ async function runImport() {
   try {
     const msg = await importVoice(file, file.name, $('#impLyrics').value, opts, null, progress);
     progress(msg);
-    impRec.file = null; $('#impFile').value = ''; impRecRender();    // 次に開いたときは、新しい録音から
+    impRec.file = null; impRec.dirty = false; $('#impFile').value = ''; impRecRender();    // 次に開いたときは、新しい録音から
     setTimeout(() => { $('#impModal').hidden = true; }, 1800);
     setSideTab('lyrics');
   } catch (e) {
@@ -4041,10 +4111,10 @@ $('#exportAudio').onclick = () => { closeMenu(); exportAudio(); };
 $('#lyricCard').onclick = () => { closeMenu(); openLyricCard(); };
 $('#scoreBtn').onclick = () => { closeMenu(); openScore(); };
 $('#impCancel').onclick = closeImport;
-$('#impClear').onclick = () => { $('#impLyrics').value = ''; renderImpCheck(); };
+$('#impClear').onclick = () => { $('#impLyrics').value = ''; impRec.dirty = true; renderImpCheck(); };
 $('#impRec').onclick = () => { impRec.rec ? impRecStop() : impRecStart(); };
 $('#impRun').onclick = runImport;
-$('#impLyrics').oninput = renderImpCheck;
+$('#impLyrics').oninput = () => { impRec.dirty = true; renderImpCheck(); };
 $('#harmBtn').onclick = () => {
   const sec = curSec();
   if (!sec.melody.length) { alert('メロディがあるセクションで使えます。'); return; }
@@ -4084,14 +4154,25 @@ $('#file').onchange = async e => {
     alert('読み込めませんでした：' + err.message);
   }
 };
-$('#newSong').onclick = () => {
+// 新しい曲を始める。前の曲の歌詞・録音が、読み込みの画面や元の歌に残らないようにする
+function startNewSong() {
   closeMenu();
   if (!confirm('新しい曲を始めますか？（今の曲は「ファイルに保存」していなければ消えます）')) return;
   stop();
   song = newSong();
-  ui.sel = -1; ui.note = -1;
+  ui.sel = -1; ui.note = -1; ui.verse = 0; ui.start = null; ui.fix = null; ui.rhy = null; ui.rollCentered = null;
+  resetImport();
+  guide.buffer = null; guide.blob = null; guide.id = null;
+  idb('readwrite', st => st.delete('latest')).catch(() => {});
   changed();
-};
+}
+$('#newSong').onclick = startNewSong;
+$('#newBtn').onclick = startNewSong;
+
+// 目盛り：押した位置（ドラッグ中も）を、再生を始める位置にする
+$('#ruler').addEventListener('pointerdown', e => { $('#ruler').setPointerCapture(e.pointerId); rulerDown(e); });
+$('#ruler').addEventListener('pointermove', e => { if (e.buttons & 1 && !playback) rulerDown(e); });
+$('#startReset').onclick = () => setStart(null);
 
 // ピアノロール
 const roll = $('#roll');
