@@ -337,6 +337,7 @@
         <button id="exportAudio">音声（MP3）を書き出す</button>
         <button id="lyricCard">歌詞カードを作る（印刷・PDF）</button>
         <button id="scoreBtn">ピアノ譜を作る（印刷・PDF）</button>
+        <button id="vocalBtn" title="歌のメロディと歌詞だけを、歌声合成ソフト（NEUTRINO・Sinsy など）で読めるファイルにします。見本の歌声を作るときに">歌のメロディを保存（歌声合成用）</button>
         <button id="copyText">コード譜をコピー</button>
         <button id="saveJson">ファイルに保存</button>
         <button id="loadJson">ファイルを開く</button>
@@ -4168,7 +4169,9 @@ function openLyricCard() {
 // ---- ピアノ譜（新しいタブで開き、印刷・PDF保存する） ----
 // 上の段：メロディ＋歌詞＋コード名、下の段：左手（コードの和音を、コードの長さだけ押さえる）。
 // 曲を MusicXML にして、楽譜の描画は Verovio（開いたタブで読み込む）に任せる。16分音符＝1 で数える
-function scoreXml(withLyrics) {
+// vocal：歌声合成ソフト（NEUTRINO・Sinsy など）に渡すための、歌のメロディだけの譜面にする。
+//        1段だけ・コード名なし。「のばし」の音には「ー」を付ける（前の音の母音を伸ばして歌わせる）
+function scoreXml(withLyrics, vocal = false) {
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
   const DIV = 4, BAR = 16;
   const key = keyInfo(song.tonic, song.mode);
@@ -4238,7 +4241,7 @@ function scoreXml(withLyrics) {
       if (n.t >= beats || (prev && prev.st === st)) continue;      // 同じ位置に重なった音は1つにする
       if (prev && prev.st + prev.ln > st) prev.ln = st - prev.st;  // 前の音と重なるなら、前の音を縮める
       const end = Math.min(base + Math.round((n.t + n.d) * DIV), base + beats * DIV);
-      melody.push({ st, ln: Math.max(1, end - st), m: n.m, lyr: n.tie ? '' : lyr[i] });
+      melody.push({ st, ln: Math.max(1, end - st), m: n.m, lyr: n.tie ? (vocal ? 'ー' : '') : lyr[i] });
     }
     total += beats * DIV;
   }
@@ -4246,7 +4249,7 @@ function scoreXml(withLyrics) {
   const out = ['<?xml version="1.0" encoding="UTF-8"?>',
     '<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">',
     `<score-partwise version="4.0"><work><work-title>${esc(song.title || '無題の曲')}</work-title></work>`,
-    '<part-list><score-part id="P1"><part-name>Piano</part-name></score-part></part-list><part id="P1">'];
+    `<part-list><score-part id="P1"><part-name>${vocal ? 'Vocal' : 'Piano'}</part-name></score-part></part-list><part id="P1">`];
   // 1つの段を書く：items（st・ln と、音の高さの配列を返す pitches）を、休符で間を埋めながら
   const staffXml = (items, lo, hi, staff, voice) => {
     const acc = {}, mx = [];
@@ -4272,23 +4275,43 @@ function scoreXml(withLyrics) {
     const lo = b * BAR, hi = lo + BAR;
     let mx = `<measure number="${b + 1}">`;
     if (b === 0) mx += `<attributes><divisions>${DIV}</divisions><key><fifths>${fifths}</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time>`
-      + '<staves>2</staves><clef number="1"><sign>G</sign><line>2</line></clef><clef number="2"><sign>F</sign><line>4</line></clef></attributes>'
+      + (vocal ? '<clef><sign>G</sign><line>2</line></clef></attributes>' : '<staves>2</staves><clef number="1"><sign>G</sign><line>2</line></clef><clef number="2"><sign>F</sign><line>4</line></clef></attributes>')
       + `<direction placement="above"><direction-type><metronome><beat-unit>quarter</beat-unit><per-minute>${song.bpm}</per-minute></metronome></direction-type><staff>1</staff><sound tempo="${song.bpm}"/></direction>`;
-    for (const [pos, name] of marks) if (pos === lo)
+    if (!vocal) for (const [pos, name] of marks) if (pos === lo)
       mx += `<direction placement="above"><direction-type><rehearsal>${esc(name)}</rehearsal></direction-type><staff>1</staff></direction>`;
-    for (const c of chords) if (c.st >= lo && c.st < hi) {    // コード名（上の段の上）
+    if (!vocal) for (const c of chords) if (c.st >= lo && c.st < hi) {    // コード名（上の段の上）
       const [, root, kind, , bass] = c.info.name.match(/^([A-G][♯♭]*)([^/]*)(\/([A-G][♯♭]*))?$/) || [null, 'C', ''];
       const part = (tag, s) => `<${tag}-step>${s[0]}</${tag}-step>` + (s.length > 1 ? `<${tag}-alter>${s[1] === '♯' ? s.length - 1 : 1 - s.length}</${tag}-alter>` : '');
       const minor = /^m(?!aj)/.test(kind) && !kind.startsWith('M');
       mx += `<harmony><root>${part('root', root)}</root><kind text="${esc(kind)}">${minor ? 'minor' : 'major'}</kind>`
         + (bass ? `<bass>${part('bass', bass)}</bass>` : '') + (c.st > lo ? `<offset>${c.st - lo}</offset>` : '') + '<staff>1</staff></harmony>';
     }
-    mx += staffXml(right, lo, hi, 1, 1) + `<backup><duration>${BAR}</duration></backup>` + staffXml(left, lo, hi, 2, 5);
+    mx += vocal ? staffXml(right, lo, hi, 1, 1) : staffXml(right, lo, hi, 1, 1) + `<backup><duration>${BAR}</duration></backup>` + staffXml(left, lo, hi, 2, 5);
     if (b === bars - 1) mx += '<barline location="right"><bar-style>light-heavy</bar-style></barline>';
     out.push(mx + '</measure>');
   }
   out.push('</part></score-partwise>');
   return out.join('\n');
+}
+// 歌声合成ソフト用に、歌のメロディと歌詞だけを MusicXML で保存する
+function exportVocal() {
+  if (!song.sections.some(s => s.melody.length && s.chords.length)) { alert('メロディがありません。'); return; }
+  // 歌声合成ソフトは、ひらがな・カタカナしか歌えない。読みのない漢字と、歌詞のない音を数えて知らせる
+  const ids = song.arrangement.length ? song.arrangement : song.sections.map(s => s.id), seen = {};
+  let kanji = 0, blank = 0, notes = 0;
+  for (const sid of ids) {
+    const sec = secById(sid);
+    if (!sec) continue;
+    const v = seen[sid] = (seen[sid] ?? -1) + 1, total = secBeats(sec), lyr = lyricsFor(sec, v);
+    sec.melody.forEach((n, i) => { if (n.t >= total || n.tie) return; notes++; if (!lyr[i]) blank++; else if (HAN.test(lyr[i])) kanji++; });
+  }
+  const warn = [];
+  if (blank) warn.push(`歌詞の付いていない音が ${blank} 個あります（その音は歌われません）。`);
+  if (kanji) warn.push(`読みのない漢字が ${kanji} 個あります。歌声合成ソフトは漢字を歌えないので、歌詞に 夢(ゆめ) のように読みを付けてください。`);
+  if (warn.length && !confirm(warn.join('\n') + '\n\nこのまま保存しますか？')) return;
+  const name = askFileName('歌のメロディ（歌声合成用）');
+  if (name === null) return;
+  download(new Blob([scoreXml(true, true)], { type: 'application/vnd.recordare.musicxml+xml' }), name + '_歌.musicxml');
 }
 const VEROVIO = 'https://cdn.jsdelivr.net/npm/verovio@6.3.0/dist/verovio-toolkit-wasm.js';
 function openScore() {
@@ -4497,6 +4520,7 @@ $('#voiceBtn').onclick = openImport;
 $('#exportAudio').onclick = () => { closeMenu(); exportAudio(); };
 $('#lyricCard').onclick = () => { closeMenu(); openLyricCard(); };
 $('#scoreBtn').onclick = () => { closeMenu(); openScore(); };
+$('#vocalBtn').onclick = () => { closeMenu(); exportVocal(); };
 $('#impCancel').onclick = closeImport;
 $('#impClear').onclick = () => { $('#impLyrics').value = ''; impRec.dirty = true; renderImpCheck(); };
 $('#impRec').onclick = () => { impRec.rec ? impRecStop() : impRecStart(); };
