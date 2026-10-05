@@ -1,5 +1,6 @@
 // Kotone の紹介動画「歌って作る」（約3分）を作る。
-// 歌詞を入れ、マイクに向かって歌い（動画では合成した声を使う）、できたメロディを整えて、書き出すまでを、Chrome を自動操作して撮る。
+// 歌詞を入れ、マイクに向かって歌い、できたメロディを整えて、書き出すまでを、Chrome を自動操作して撮る。
+// 歌声は、songs/video/my-voice.m4a（人が歌った録音。Git の管理外）があればそれを、なければ合成した声（sing-song.mjs）を使う。
 // 撮り方は make-video.mjs と同じ（画面は CDP の画面キャプチャ、音は録画中の記録から録画後に作り直す）。
 //   使い方: cd video && node make-video-sing.mjs   （出力: out-sing/kotone-sing.mp4）
 //   別のURLで撮る: KOTONE_URL=http://localhost:8766/ node make-video-sing.mjs
@@ -90,8 +91,14 @@ const OVERLAY = () => {
 // ================= 撮影 =================
 fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(FRAMES, { recursive: true });
-const VOICE = path.join(OUT, 'voice.wav');
-const voice = writeVoice(VOICE);                           // 合成した歌声（マイクの代わりに Chrome へ流す）
+const VOICE = path.join(OUT, 'voice.wav');                 // マイクの代わりに Chrome へ流す歌声
+const REAL_VOICE = path.resolve('../songs/video/my-voice.m4a'), REAL = fs.existsSync(REAL_VOICE);
+let voice;
+if (REAL) {
+  // 人が歌った録音：前後の無音を切り、聞きやすい音量にそろえる
+  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-ss', '0.9', '-t', '45.4', '-i', REAL_VOICE, '-af', 'highpass=f=70,loudnorm=I=-18:TP=-2:LRA=11', '-ar', '48000', '-ac', '1', VOICE]);
+  voice = { seconds: +execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', VOICE]).toString(), real: true };
+} else voice = writeVoice(VOICE);
 console.log('voice:', JSON.stringify(voice));
 
 const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--autoplay-policy=no-user-gesture-required',
@@ -226,7 +233,7 @@ await sleep(7000);
 await spot(null);
 await cap('途中で速くなっても、音を外しても、大丈夫。あとで整えられます');
 await sleep(9000);
-await cap('（この動画では、合成した声を使っています）');
+await cap(REAL ? '思いついた節で、自由に歌っています' : '（この動画では、合成した声を使っています）');
 await sleep(Math.max(1000, voice.seconds * 1000 - 18500 - 900));
 await cap('歌い終わったら、録音を止めて「読み込む」');
 await click('#impRec', 500);
@@ -246,9 +253,7 @@ await page.waitForFunction(() => /できました/.test(document.querySelector('
 await page.evaluate(() => { song.title = 'はじめての歌'; song.drums = false; song.loop = false; changed(); });   // 動画では、ドラムとくり返しを切っておく
 await cap('メロディとコードができました');
 await sleep(3200);
-const got = await page.evaluate(() => song.sections.map(s => [...s.melody].filter(n => !n.tie).sort((a, b) => a.t - b.t).map(n => n.m)).flat());
-const want = TUNE.flat(2).map((m, i) => m);
-console.log('imported notes:', got.length, 'expected:', want.length, 'key/bpm:', await page.evaluate(() => keyInfo(song.tonic, song.mode).name + ' ' + song.bpm));
+console.log('imported:', await page.evaluate(() => `${keyInfo(song.tonic, song.mode).name}・BPM ${song.bpm}・歌う音 ${song.sections.reduce((a, s) => a + s.melody.filter(n => !n.tie).length, 0)}・のばし ${song.sections.reduce((a, s) => a + s.melody.filter(n => n.tie).length, 0)}`));
 
 // ---- ③ 整える ----
 await chap('③ 整える');
@@ -293,42 +298,72 @@ await clickLoc(panelBtn('曲全体に適用'));
 await sleep(1200);
 await cap('拍がそろいました。音の高さは、歌ったままです');
 await click('#playSec');
-await sleep(9500);
+await sleep(7500);
 await click('#playSec', 300);
 await sleep(500);
-// 外した1音を、ドラッグで直す（4行目の後半の「も」）
-const fix = await page.evaluate(({ WRONG, TUNE }) => {
-  const sec = song.sections[0], sp = lineSpans(sec)[WRONG.line];
-  const k = TUNE[WRONG.line].slice(0, WRONG.part).reduce((a, p) => a + p.length, 0) + WRONG.i;
-  const n = sec.melody.filter(x => !x.tie && x.t >= sp.s && x.t < sp.e).sort((a, b) => a.t - b.t)[k];
-  const box = document.querySelector('#scroller');
-  const g = rollGeom();
-  box.scrollLeft = Math.max(0, n.t * g.ppb - box.clientWidth * 0.6);
+// 気になる1音を、ドラッグで直す（合成の声では、わざと外した音。人の歌では、前後から飛び出している音）
+const fix = await page.evaluate(({ WRONG, TUNE, REAL }) => {
+  const sec = song.sections[0];
+  let n, want;
+  if (REAL) {
+    // 前の音からも次の音からも、同じ向きに大きく飛び出している音を探し、近いほうの隣の音の高さにそろえる
+    const ns = sec.melody.filter(x => !x.tie).sort((a, b) => a.t - b.t);
+    let best = 0;
+    for (let i = 1; i < ns.length - 1; i++) {
+      const a = ns[i].m - ns[i - 1].m, c = ns[i].m - ns[i + 1].m;
+      if (Math.sign(a) !== Math.sign(c)) continue;
+      const jump = Math.min(Math.abs(a), Math.abs(c));
+      if (jump > best) { best = jump; n = ns[i]; want = Math.abs(a) <= Math.abs(c) ? ns[i - 1].m : ns[i + 1].m; }
+    }
+    if (best < 3) return null;
+  } else {
+    const sp = lineSpans(sec)[WRONG.line];
+    const k = TUNE[WRONG.line].slice(0, WRONG.part).reduce((a, p) => a + p.length, 0) + WRONG.i;
+    n = sec.melody.filter(x => !x.tie && x.t >= sp.s && x.t < sp.e).sort((a, b) => a.t - b.t)[k];
+    want = TUNE[WRONG.line][WRONG.part][WRONG.i];
+  }
+  const g = rollGeom(), box = document.querySelector('#rollbox');
+  // 直す前と後の高さが、どちらも画面に入るように縦の位置を合わせる
+  box.scrollTop = Math.max(0, (g.hi - (n.m + want) / 2 + 0.5) * g.rowH - box.clientHeight / 2);
   const r = document.querySelector('#roll').getBoundingClientRect();
-  return { x: r.left + (n.t + n.d / 2) * g.ppb, y: r.top + (g.hi - n.m + 0.5) * g.rowH, row: g.rowH, m: n.m, t: n.t, want: TUNE[WRONG.line][WRONG.part][WRONG.i] };
-}, { WRONG, TUNE });
-await pointAt(fix.x, fix.y, 900);
-await cap('外してしまった音は、音符を上下に動かして直せます');
-await sleep(2600);
-const rows = fix.m - fix.want;
-await page.mouse.move(fix.x, fix.y);
-await page.mouse.down();
-for (let i = 1; i <= 12; i++) {
-  await page.mouse.move(fix.x, fix.y + fix.row * rows * i / 12);
-  await ov('cursor', fix.x, fix.y + fix.row * rows * i / 12);
-  await sleep(70);
-}
-await page.mouse.up();
-await sleep(2000);
-console.log('fixed note:', await page.evaluate(t => song.sections[0].melody.find(x => x.t === t)?.m, fix.t), 'want', fix.want);
+  return { x: r.left + (n.t + n.d / 2) * g.ppb, y: r.top + (g.hi - n.m + 0.5) * g.rowH, row: g.rowH, m: n.m, t: n.t, want };
+}, { WRONG, TUNE, REAL });
+if (fix) {
+  await sleep(400);
+  await pointAt(fix.x, fix.y, 900);
+  await cap('気になる音は、音符を上下に動かして直せます');
+  await sleep(2600);
+  const rows = fix.m - fix.want;
+  await page.mouse.move(fix.x, fix.y);
+  await page.mouse.down();
+  for (let i = 1; i <= 12; i++) {
+    await page.mouse.move(fix.x, fix.y + fix.row * rows * i / 12);
+    await ov('cursor', fix.x, fix.y + fix.row * rows * i / 12);
+    await sleep(70);
+  }
+  await page.mouse.up();
+  await sleep(2000);
+  console.log('fixed note:', fix.m, '→', await page.evaluate(t => song.sections[0].melody.find(x => !x.tie && x.t === t)?.m, fix.t), 'want', fix.want);
+} else console.log('fix scene skipped (no outlier)');
 // 全体の高さ
 await spot('#xpose', 6);
-await cap('全体の高さは「高さ ▲▼」で、歌いやすい所に合わせられます');
-await sleep(1800);
-await click('#xpose button[data-d="1"]');
-await sleep(900);
-await click('#xpose button[data-d="1"]');
-await sleep(2200);
+if (REAL) {
+  // 低い声で歌った録音なので、1オクターブ上げて聴きやすくする（Shift を押しながら ▲）
+  await cap('全体の高さは「高さ ▲▼」で動かせます。ここでは、1オクターブ上げます');
+  await sleep(2200);
+  await pointAt(...Object.values(await page.locator('#xpose button[data-d="1"]').boundingBox().then(b => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 }))), 700);
+  await page.keyboard.down('Shift');
+  await page.locator('#xpose button[data-d="1"]').click({ modifiers: ['Shift'] });
+  await page.keyboard.up('Shift');
+  await sleep(2600);
+} else {
+  await cap('全体の高さは「高さ ▲▼」で、歌いやすい所に合わせられます');
+  await sleep(1800);
+  await click('#xpose button[data-d="1"]');
+  await sleep(900);
+  await click('#xpose button[data-d="1"]');
+  await sleep(2200);
+}
 await spot(null);
 await cap('');
 

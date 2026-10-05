@@ -1207,7 +1207,7 @@ function schedulePass(at) {
       const skip = Math.max(0, at - ga);                   // 行の途中から始めるときは、その分だけ先から
       if (skip >= dur) continue;
       const src = ctx.createBufferSource(), gn = ctx.createGain();
-      src.buffer = guide.buffer; gn.gain.value = 1.1;
+      src.buffer = guide.buffer; gn.gain.value = 1.1 * (song.guideGain || 1);
       src.connect(gn).connect(pb.out);
       src.start(ga + skip, Math.max(0, g.t0 - 0.05) + skip, dur - skip);
     }
@@ -3229,6 +3229,10 @@ async function analyzeVoice(file, lyricsText, opts, progress, starts = null) {
   const hop = 160, W = 1024, frames = [];
   const rmsAll = [];
   for (let o = 0; o + W < x.length; o += hop) { let s = 0; for (let j = 0; j < W; j++) s += x[o + j] * x[o + j]; rmsAll.push(Math.sqrt(s / W)); }
+  // 小さな音で録った歌は、声の一部が「静かな所」とみなされて抜け落ちる。先に音量をそろえる（声の大きい所が、決まった大きさになるように）
+  const loud = [...rmsAll].sort((a, b) => a - b)[Math.floor(rmsAll.length * 0.95)] || 0;
+  const boost = loud > 0 ? Math.min(30, Math.max(1, 0.12 / loud)) : 1;
+  if (boost > 1) { for (let i = 0; i < x.length; i++) x[i] *= boost; for (let i = 0; i < rmsAll.length; i++) rmsAll[i] *= boost; }
   const sortedR = [...rmsAll].sort((a, b) => a - b);
   const th = Math.max(0.006, sortedR[Math.floor(sortedR.length * 0.1)] * 3); // 静かな所の3倍より大きい声だけ
   for (let i = 0; i < rmsAll.length; i++) {
@@ -3365,7 +3369,7 @@ async function analyzeVoice(file, lyricsText, opts, progress, starts = null) {
     }
   });
   const bpm = rhythmStage(lines, opts);
-  return { lines, blocks, title, bpm, key: best, phrases: phrases.length, notes: N.length, noLyrics };
+  return { lines, blocks, title, bpm, key: best, phrases: phrases.length, notes: N.length, noLyrics, boost };
 }
 
 // 解析結果から新しい曲を作る
@@ -3540,6 +3544,7 @@ async function importVoice(file, name, lyricsText, opts, starts, progress) {
     guide.blob = file;
     guide.id = song.guideId;
     song.guideOn = true;
+    song.guideGain = +Math.min(12, res.boost || 1).toFixed(2);   // 小さな音で録った歌は、「元の歌」も大きくして鳴らす
     song.importInfo = { lyrics: lyricsText, opts, name, starts: starts || null }; // タイミング合わせのやり直しに使う
     const matched = res.lines.filter(l => l.notes && l.notes.length).length;
     const kname = keyInfo(song.tonic, song.mode).name;
@@ -3990,7 +3995,7 @@ async function exportAudio() {
     if (song.guideOn && guide.buffer && guide.id === song.guideId) {
       for (const mk of plan.markers) for (const g of secById(mk.sid)?.guide || []) {
         const src = off.createBufferSource(), gn = off.createGain();
-        src.buffer = guide.buffer; gn.gain.value = 1.1;
+        src.buffer = guide.buffer; gn.gain.value = 1.1 * (song.guideGain || 1);
         src.connect(gn).connect(master);
         src.start(lead + (mk.t + g.beat) * beat, Math.max(0, g.t0 - 0.05), g.t1 - g.t0 + 0.05);
       }
