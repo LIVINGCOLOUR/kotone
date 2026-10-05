@@ -379,11 +379,20 @@ const dl = page.waitForEvent('download');
 await click('#midi');
 const download = await dl;
 await download.saveAs(path.join(OUT, 'asa-no-uta.mid'));
-await sleep(4200);
+await sleep(3600);
+// 「ファイル」メニューをもう一度開いて、ほかの書き出しも見せる
+await click('#fileMenu summary');
+await sleep(500);
+await spot('#fileMenu .menu-body', 4);
+await cap('音声（MP3）、コード付きの歌詞カード、ピアノ譜も作れます');
+await sleep(4600);
+await spot(null);
+await click('#fileMenu summary', 300);
+await sleep(400);
 await cap('');
 await chap('');
 await ov('cursorFast', -80, -80);
-await ov('card', '<div><div class="logo">Kotone</div><div class="sub">歌詞から、コード、メロディまで。</div><div class="url">kotonemusic.pages.dev</div><div class="small">PC の Chrome でどうぞ（MIDIキーボードにも対応）</div></div>');
+await ov('card', '<div><div class="logo">Kotone</div><div class="sub">歌詞から、コード、メロディまで。</div><div class="url">kotonemusic.pages.dev</div><div class="small">PC の Chrome でどうぞ（MIDIキーボードにも対応）</div><div class="small">鍵盤を使わず、歌って作る方法は、別の動画で紹介します</div></div>');
 await sleep(7000);
 
 // ---- 撮影終了：音を取り出す ----
