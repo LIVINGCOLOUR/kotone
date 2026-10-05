@@ -85,6 +85,8 @@
     box-shadow: 0 8px 24px rgba(0, 0, 0, .15); }
   .menu-body button { text-align: left; background: transparent; border-color: transparent; }
   .menu-body button:hover { background: var(--chip); }
+  #phraseTools { display: flex; flex-direction: column; border-top: 1px solid var(--border); margin-top: 4px; padding-top: 4px; }
+  .menu-note { font-size: 12px; color: var(--muted); padding: 4px 10px 2px; white-space: nowrap; }
 
   .tabs { display: flex; flex-wrap: wrap; gap: 4px; }
   .tab { display: flex; align-items: center; border-radius: 7px; border: 1px solid var(--border); background: var(--chip); }
@@ -303,6 +305,7 @@
       </select>
     </label>
     <label><input id="drums" type="checkbox"> ドラム</label>
+    <select id="drumKit" title="ドラムの音。「軽く刻む」は、静かな曲に合う、チャッ、チャッ、と1拍に1回刻むだけの音です"><option value="rock">8ビート</option><option value="soft">軽く刻む</option></select>
     <label><input id="loop" type="checkbox"> ループ</label>
     <label id="guideWrap" title="読み込んだ元の歌と、できた曲を聴き比べます（元の歌は、行ごとに曲の位置に合わせて鳴ります）" hidden><span class="lbl">聴く</span>
       <select id="listen"><option value="song">できた曲</option><option value="guide">元の歌</option><option value="both">両方</option></select>
@@ -372,6 +375,14 @@
             <button id="fixBtn" title="コードとぶつかる音・キーから外れた音を見つけて、まとめて直します">音程を整える（理論チェック）</button>
             <button id="harmBtn" title="このセクションのメロディに合うコードを、1小節ずつ付け直します">コードを付ける</button>
             <button id="modeBtn"></button>
+            <div id="phraseTools" hidden>
+              <div class="menu-note" id="phraseNote"></div>
+              <button id="phrResing" title="選んだフレーズだけを、マイクに向かって歌い直します。そのフレーズの音だけが入れ替わり、前後は変わりません">🎤 このフレーズを歌い直す…</button>
+              <button id="phrDouble" title="速く歌われて、短く読み取られたフレーズに。フレーズの中の音が2倍の長さになり、うしろは後ろへずれます">フレーズの長さを2倍にする</button>
+              <button id="phrHalf" title="ゆっくり歌われて、長く読み取られたフレーズに。フレーズの中の音が半分の長さになり、うしろは前へ詰まります">フレーズの長さを半分にする</button>
+              <button id="phrGapAdd" title="次の歌い出しが早すぎるときに。このフレーズのあとの休みを1小節のばします">フレーズのあとの間を1小節増やす</button>
+              <button id="phrGapCut" title="休みが長すぎるときに。このフレーズのあとの休みを1小節縮めます">フレーズのあとの間を1小節減らす</button>
+            </div>
             <button id="fancy" title="コードを 7th などに変えて、響きをおしゃれにします">コードをおしゃれにする</button>
             <button id="clear" title="このセクションのコードとメロディを消します（↶ で戻せます）">クリア</button>
           </div>
@@ -492,11 +503,11 @@
       </div>
       <div class="imp-right">
         <label class="imp-l">3. 設定</label>
-        <label title="歌詞がないときは、ひと息で歌ったフレーズ1つが1行です">歌詞1行（1フレーズ）を <select id="impBars"><option value="1">1小節</option><option value="2" selected>2小節</option><option value="4">4小節</option></select> にする</label>
+        <label title="歌詞がないときは、ひと息で歌ったフレーズ1つが1行です">歌詞1行（1フレーズ）を <select id="impBars"><option value="0" selected>自動（歌から拍を見つける）</option><option value="1">1小節</option><option value="2">2小節</option><option value="4">4小節</option></select> にする</label>
         <label>刻み <select id="impGrid"><option value="0.5" selected>8分音符</option><option value="0.25">16分音符</option></select></label>
         <label>高さ <select id="impOct"><option value="0" selected>歌ったまま</option><option value="1">1オクターブ上げる</option><option value="-1">1オクターブ下げる</option></select></label>
-        <label><input id="impSnap" type="checkbox" checked> キーから外れた音を、キーの音に寄せる</label>
-        <p class="small">曲全体の高さ（キー）は歌ったままにして、音どうしのバランスだけ整えます。全体の高さは、読み込んだあとに、いちばん上の「全体の高さ」で上げ下げできます。</p>
+        <label title="オンにすると、キーの音階にない音を、歌った高さに近いほうの音階の音へ動かします。初めはオフ（歌ったまま）です"><input id="impSnap" type="checkbox"> キーから外れた音を、キーの音に寄せる（高さが変わります）</label>
+        <p class="small">音の高さは、歌ったまま（いちばん近い鍵盤の音）にします。直したい音は、読み込んだあとに音符を上下に動かせます。曲全体の高さは、いちばん上の「高さ ▼▲」で上げ下げできます。</p>
         <p class="small">自由なテンポで歌っていても、歌詞の行ごとに伸び縮みさせて拍にそろえます。コードはメロディから1小節ずつ付けます。</p>
       </div>
     </div>
@@ -505,6 +516,27 @@
       <div class="spacer"></div>
       <button id="impCancel">キャンセル</button>
       <button id="impRun" class="primary">読み込む</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="resingModal" hidden>
+  <div class="modal-box sync-box" role="dialog" aria-label="フレーズを歌い直す">
+    <div class="row"><h2 style="color:var(--text);font-size:16px">このフレーズを歌い直す</h2>
+      <span class="small" id="resingWhere"></span></div>
+    <div class="sync-now">
+      <div class="small">歌う所</div>
+      <div id="resingLyr" class="sync-cur"></div>
+      <div class="small">伴奏は鳴りません。この部分だけを、自分の速さで歌ってください。前後の音は変わりません。</div>
+    </div>
+    <div class="row">
+      <button id="resingRec">● 録音する</button>
+      <span id="resingTime" class="small"></span>
+      <span class="imp-meter" id="resingMeter" hidden><i></i></span>
+      <span class="small" id="resingMsg"></span>
+      <div class="spacer"></div>
+      <button id="resingCancel">やめる</button>
+      <button id="resingTry" disabled>▶ 試しに聴く</button>
+      <button id="resingApply" class="primary" disabled>このメロディに差し替える</button>
     </div>
   </div>
 </div>
@@ -820,6 +852,12 @@ const secById = id => song.sections.find(s => s.id === id);
 const curSec = () => secById(song.current) || song.sections[0];
 const secKey = sec => keyInfo(song.tonic + sec.shift, song.mode);
 const secBeats = sec => sec.chords.reduce((a, c) => a + c.beats, 0);
+// 元の歌の区間と、その区間が使える長さ（拍。次の区間の頭か、セクションの終わりまで）。
+// 元の歌は、歌った速さのまま鳴らす。テンポを速くして収まらなくなった分は、次の区間が始まる所で切る（声が二重にならないように）
+function guideSlots(sec) {
+  const g = [...(sec?.guide || [])].sort((a, b) => a.beat - b.beat), total = sec ? secBeats(sec) : 0;
+  return g.map((x, i) => ({ g: x, slot: Math.max(0, (g[i + 1] ? g[i + 1].beat : total) - x.beat) }));
+}
 // 聴き比べ：できた曲だけ（song）／元の歌だけ（guide）／両方（both）
 const listenMode = () => !song.guideOn ? 'song' : song.guideOnly ? 'guide' : 'both';
 function setListen(v) {
@@ -984,10 +1022,23 @@ const DRUM = {
   },
   38: (out, t) => noiseHit(out, t, 1200, 0.4, 0.18),
   42: (out, t, v) => noiseHit(out, t, 7000, v, 0.05),
+  // 軽く刻む音（44）：「チャッ」と短く歯切れよく止まる音
+  44: (out, t, v) => {
+    const s = ctx.createBufferSource(); s.buffer = drumBuf();
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2200;
+    const bp = ctx.createBiquadFilter(); bp.type = 'peaking'; bp.frequency.value = 4500; bp.Q.value = 0.9; bp.gain.value = 8;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + 0.004); g.gain.exponentialRampToValueAtTime(0.001, t + 0.075);
+    s.connect(hp).connect(bp).connect(g).connect(out); s.start(t); s.stop(t + 0.12);
+  },
 };
-// 8ビート。t は拍単位
+// ドラムの刻み。t は拍単位。song.drumKit：'rock'（8ビート）／'soft'（軽く刻む：チャッ、チャッ、と1拍に1回）
 function drumHits(total) {
   const hits = [];
+  if (song.drumKit === 'soft') {
+    for (let t = 0; t < total; t++) hits.push({ t, n: 44, v: t % 2 ? 0.17 : 0.13 });   // 1拍に1回。2・4拍めを少しだけ強く
+    return hits;
+  }
   for (let i = 0; i < total * 2; i++) {
     const t = i / 2;
     hits.push({ t, n: 42, v: i % 2 ? 0.06 : 0.11 });
@@ -1203,12 +1254,13 @@ function schedulePass(at) {
   if (!only) for (const n of plan.mel) if (n.t >= off - 1e-6) note(pb.out, n.m, t0 + n.t * beat, n.d * beat, 0.6);
   // 元の歌：行ごとに、その行の始まりに合わせて録音の該当部分を鳴らす（行の中は歌ったままのテンポ）
   if (hasGuide) {
-    for (const mk of plan.markers) for (const g of secById(mk.sid)?.guide || []) {
-      const ga = t0 + (mk.t + g.beat) * beat, dur = g.t1 - g.t0 + 0.05;
+    for (const mk of plan.markers) for (const { g, slot } of guideSlots(secById(mk.sid))) {
+      const ga = t0 + (mk.t + g.beat) * beat, full = g.t1 - g.t0 + 0.05, dur = Math.min(full, slot * beat);
       const skip = Math.max(0, at - ga);                   // 行の途中から始めるときは、その分だけ先から
       if (skip >= dur) continue;
-      const src = ctx.createBufferSource(), gn = ctx.createGain();
-      src.buffer = guide.buffer; gn.gain.value = 1.1 * (song.guideGain || 1);
+      const src = ctx.createBufferSource(), gn = ctx.createGain(), vol = 1.1 * (song.guideGain || 1);
+      src.buffer = guide.buffer; gn.gain.value = vol;
+      if (dur < full && dur - skip > 0.05) { gn.gain.setValueAtTime(vol, ga + dur - 0.04); gn.gain.linearRampToValueAtTime(0, ga + dur); }
       src.connect(gn).connect(pb.out);
       src.start(ga + skip, Math.max(0, g.t0 - 0.05) + skip, dur - skip);
     }
@@ -1626,7 +1678,7 @@ function splitSection(sec, beat, name) {
   sec.melody = sec.melody.filter(n => n.t < beat).map(n => ({ ...n, d: Math.min(n.d, beat - n.t) }));
   // 歌詞の行の分け目：読み込んだ曲なら元の歌の行の区切りから、そうでなければ前半で使った歌詞の音の数から決める
   let k;
-  if (sec.guide && sec.guide.length) k = sec.guide.filter(g => g.beat < beat).length;
+  if (sec.guide && sec.guide.length) k = sec.guide.filter(g => !g.sub && g.beat < beat).length;
   else {
     const used = sec.melody.filter(n => !n.tie).length;
     const lines = (sec.verses[0] || '').split('\n');
@@ -1644,6 +1696,231 @@ function splitSection(sec, beat, name) {
   // 曲の並びでは、もとのセクションのすぐ後ろに入れる
   song.arrangement = song.arrangement.flatMap(id => id === sec.id ? [id, nsec.id] : [id]);
   return nsec;
+}
+// フレーズ：元の歌の区間1つぶん（歌い出しから、次の歌い出しまで）。歌から作ったセクションにだけある。
+// 選ばれているのは、再生を始める位置（上の目盛りでクリックした所）をふくむフレーズ。なければ最初のフレーズ
+function phraseAt(sec) {
+  const total = secBeats(sec), g = [...(sec.guide || [])].sort((a, b) => a.beat - b.beat).filter(x => x.beat < total);
+  if (!g.length || !sec.melody.length) return null;
+  const at = ui.start && ui.start.sec === sec.id ? ui.start.beat : 0;
+  let i = 0;
+  while (i < g.length - 1 && g[i + 1].beat <= at) i++;
+  return { i, s: g[i].beat, e: g[i + 1] ? g[i + 1].beat : total, total };
+}
+function renderPhraseNote() {
+  const ph = phraseAt(curSec());
+  $('#phraseTools').hidden = !ph;
+  if (!ph) return;
+  const a = Math.floor(ph.s / 4) + 1, b = Math.ceil(ph.e / 4);
+  $('#phraseNote').textContent = `フレーズを直す：${a === b ? a : a + '〜' + b}小節め（上の目盛りをクリックして選びます）`;
+}
+// フレーズを人が直す。機械は「速く歌った」と「短いフレーズだった」を見分けられないので、読み違えた所をここで直す。
+//   double：フレーズの長さを2倍に（中の音も2倍）　half：半分に　gapAdd／gapCut：フレーズのあとの休みを1小節増やす／減らす
+// うしろの音・コード・元の歌の区間は、その分だけ前後へずれる。コードは一緒に伸び縮みさせ、割り切れないときだけ付け直す
+function editPhrase(kind) {
+  const sec = curSec(), ph = phraseAt(sec);
+  if (!ph) return;
+  const { s, e } = ph, len = e - s;
+  const inR = t => t >= s - 1e-6 && t < e - 1e-6;
+  let map, f = 1, delta = 0;                                 // map：拍の位置の移し方
+  if (kind === 'double') { f = 2; delta = len; }
+  else if (kind === 'half') {
+    if (len % 8) { alert('このフレーズは半分にできません（半分にすると、小節の途中で終わってしまいます）。'); return; }
+    f = 0.5; delta = -len / 2;
+  } else if (kind === 'gapAdd') delta = 4;
+  else if (kind === 'gapCut') {
+    const last = Math.max(s, ...sec.melody.filter(n => inR(n.t)).map(n => n.t + n.d));
+    if (len <= 4 || last > e - 4 + 1e-6) { alert('これ以上は減らせません（フレーズのあとに、1小節ぶんの休みがありません）。'); return; }
+    delta = -4;
+  }
+  map = t => t < s - 1e-6 ? t : t < e - 1e-6 ? s + (t - s) * f : t + delta;
+  for (const n of sec.melody) {
+    const scaled = inR(n.t);
+    n.t = map(n.t);
+    if (scaled && f !== 1) n.d = Math.max(0.125, n.d * f);
+  }
+  const newE = e + delta;
+  sec.melody.forEach((n, i) => { const nx = sec.melody[i + 1]; if (n.t < newE && n.t + n.d > newE + 1e-6 && n.t >= s) n.d = Math.max(0.125, newE - n.t); });
+  for (const g of sec.guide || []) g.beat = map(g.beat);
+  // コード：拍の区間に直してから、同じ移し方で動かす
+  const spans = [];
+  let acc = 0;
+  for (const c of sec.chords) { spans.push({ c, a: acc, b: acc + c.beats }); acc += c.beats; }
+  const cut = at => { const i = spans.findIndex(x => x.a < at - 1e-6 && x.b > at + 1e-6); if (i >= 0) { const x = spans[i]; spans.splice(i, 1, { c: x.c, a: x.a, b: at }, { c: { ...x.c }, a: at, b: x.b }); } };
+  cut(s); cut(e);
+  let out = [];
+  if (kind === 'gapCut') { cut(e - 4); out = spans.filter(x => !(x.a >= e - 4 - 1e-6 && x.b <= e + 1e-6)).map(x => ({ c: x.c, beats: x.b - x.a })); }
+  else {
+    for (const x of spans) {
+      out.push({ c: x.c, beats: (x.b - x.a) * (x.a >= s - 1e-6 && x.b <= e + 1e-6 ? f : 1) });
+      if (kind === 'gapAdd' && Math.abs(x.b - e) < 1e-6) out.push({ c: { ...x.c }, beats: 4 });
+    }
+  }
+  const bars = (ph.total + delta) / 4;
+  if (out.every(x => x.beats >= 1 && Number.isInteger(x.beats))) sec.chords = out.map(x => ({ ...x.c, beats: x.beats }));
+  else harmonize(sec, bars);
+  ui.sel = -1; ui.note = -1;
+  changed();
+}
+// ---- フレーズを歌い直す：選んだフレーズだけを録音し直して、そのフレーズの音を入れ替える ----
+// 伴奏なしで歌う（最初の読み込みと同じ）。入れ替えるのはフレーズの中の音と、聴き比べ用の元の歌だけ。前後の音・コード・小節数は変えない。
+//   ・音の高さは歌ったまま（いちばん近い鍵盤の音）
+//   ・歌った長さ（最初の音から最後の音の終わりまで）を、前のメロディが使っていた範囲に合わせて拍に置く
+//   ・歌詞がずれないように、歌詞の付く音の数は前と同じにする（足りなければ長い音を分け、多ければ「のばし」にする）
+const resing = { sec: null, ph: null, rec: null, stream: null, chunks: [], actx: null, raf: 0, t0: 0, discard: false, notes: null, clip: null, busy: false };
+function resingRender() {
+  const on = !!resing.rec;
+  $('#resingRec').textContent = on ? '■ 録音を止める' : resing.notes ? '● 録り直す' : '● 録音する';
+  $('#resingRec').className = on ? 'rec-on' : '';
+  $('#resingRec').disabled = resing.busy;
+  $('#resingMeter').hidden = !on;
+  if (!on) $('#resingTime').textContent = '';
+  $('#resingTry').disabled = $('#resingApply').disabled = on || resing.busy || !resing.notes;
+}
+function openResing() {
+  const sec = curSec(), ph = phraseAt(sec);
+  if (!ph) return;
+  stop();
+  closeMenu();
+  resing.sec = sec; resing.ph = ph; resing.notes = null; resing.clip = null; resing.busy = false;
+  const labels = lyricMap(sec).labels;
+  const text = sec.melody.map((n, i) => ({ n, l: labels[i] })).filter(x => x.n.t >= ph.s - 1e-6 && x.n.t < ph.e - 1e-6 && x.l && !x.l.tie)
+    .sort((a, b) => a.n.t - b.n.t).map(x => x.l.text).join('');
+  const a = Math.floor(ph.s / 4) + 1, b = Math.ceil(ph.e / 4);
+  $('#resingWhere').textContent = `${sec.name}・${a === b ? a : a + '〜' + b}小節め`;
+  $('#resingLyr').textContent = text || '（歌詞なし）';
+  $('#resingMsg').textContent = '';
+  resingRender();
+  $('#resingModal').hidden = false;
+}
+function closeResing() {
+  resingStop(true);
+  $('#resingModal').hidden = true;
+}
+async function resingStart() {
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { alert('このブラウザは録音に対応していません。Chrome で開いてください。'); return; }
+  try {
+    resing.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true } });
+  } catch (e) { alert('マイクを使えませんでした。ブラウザのマイクの許可を確かめてください。'); return; }
+  resing.chunks = []; resing.notes = null; resing.clip = null;
+  $('#resingMsg').textContent = '';
+  const rec = resing.rec = new MediaRecorder(resing.stream);
+  rec.ondataavailable = e => { if (e.data.size) resing.chunks.push(e.data); };
+  rec.onstop = () => {
+    const file = !resing.discard && resing.chunks.length ? new File(resing.chunks, 'resing', { type: rec.mimeType || 'audio/webm' }) : null;
+    resing.discard = false; resing.rec = null;
+    resingRender();
+    if (file) resingAnalyze(file);
+  };
+  const actx = resing.actx = new AudioContext(), an = actx.createAnalyser();
+  an.fftSize = 1024;
+  actx.createMediaStreamSource(resing.stream).connect(an);
+  const buf = new Float32Array(an.fftSize), bar = $('#resingMeter i');
+  resing.t0 = performance.now();
+  const tick = () => {
+    if (!resing.rec) return;
+    an.getFloatTimeDomainData(buf);
+    let p = 0;
+    for (const v of buf) p = Math.max(p, Math.abs(v));
+    bar.style.width = Math.min(100, p * 140) + '%';
+    $('#resingTime').textContent = `録音中 ${Math.floor((performance.now() - resing.t0) / 1000)}秒`;
+    resing.raf = requestAnimationFrame(tick);
+  };
+  rec.start();
+  resingRender();
+  tick();
+}
+function resingStop(discard = false) {
+  if (!resing.rec) return;
+  resing.discard = discard;
+  resing.rec.stop();
+  resing.stream.getTracks().forEach(t => t.stop());
+  resing.actx?.close();
+  cancelAnimationFrame(resing.raf);
+}
+// 録音した声を音符にして、フレーズの枠に置く（まだ曲には入れない）
+async function resingAnalyze(file) {
+  const { sec, ph } = resing, msg = t => { $('#resingMsg').textContent = t; };
+  resing.busy = true; resingRender();
+  try {
+    const res = await analyzeVoice(file, '', { barsPerLine: 2, grid: 0.5, octave: 0, snapKey: false }, msg);
+    const ns = res.lines.flatMap(l => l.notes).map(n => ({ t0: n.t0, t1: n.t1, p: n.p })).sort((a, b) => a.t0 - b.t0);
+    if (!ns.length) { msg('声を読み取れませんでした。もう一度、少し大きな声で歌ってみてください。'); return; }
+    const old = sec.melody.filter(n => n.t >= ph.s - 1e-6 && n.t < ph.e - 1e-6);
+    // 歌詞の付く音の数を、前と同じにする
+    const want = old.filter(n => !n.tie).length;
+    if (want) {
+      while (ns.length < want) {
+        let k = 0;
+        ns.forEach((n, j) => { if (n.t1 - n.t0 > ns[k].t1 - ns[k].t0) k = j; });
+        const n = ns[k], mid = (n.t0 + n.t1) / 2;
+        ns.splice(k, 1, { ...n, t1: mid }, { ...n, t0: mid });
+      }
+      ns.map((n, j) => ({ j, cost: j === 0 ? Infinity : Math.abs(n.p - ns[j - 1].p) + (n.t1 - n.t0) }))
+        .sort((a, b) => a.cost - b.cost).slice(0, ns.length - want).forEach(({ j }) => { ns[j].tie = true; });
+    }
+    // 歌った長さを、前のメロディが使っていた範囲（なければフレーズの枠から1拍引いた長さ）に合わせる
+    const o0 = old.length ? Math.min(...old.map(n => n.t)) : ph.s, o1 = old.length ? Math.min(ph.e, Math.max(...old.map(n => n.t + n.d))) : ph.e - 1;
+    const first = ns[0].t0, tau = Math.max(0.05, ns[ns.length - 1].t1 - first) / Math.max(1, o1 - o0);   // 1拍の秒数
+    const grid = 0.5, fine = 0.25;
+    let prev = -1;
+    for (const n of ns) {
+      const raw = (n.t0 - first) / tau;
+      let b = Math.round(raw / grid) * grid;
+      if (b <= prev) b = Math.max(prev + fine, Math.round(raw / fine) * fine);
+      n.b = prev = b;
+    }
+    // 入りきらないときは、うしろから16分音符で詰める
+    const lim = ph.e - o0;
+    for (let i = ns.length - 1, cap = lim - fine; i >= 0; i--, cap -= fine) { if (ns[i].b > cap) ns[i].b = cap; else break; }
+    if (ns[0].b < 0) { msg('このフレーズには音が多すぎて入りません。フレーズの長さを2倍にしてから、もう一度試してください。'); return; }
+    ns.forEach((n, i) => { n.e = Math.min(Math.max(n.b + fine, Math.round((n.t1 - first) / tau / fine) * fine), ns[i + 1] ? ns[i + 1].b : lim); });
+    resing.notes = ns.map(n => ({ t: o0 + n.b, d: n.e - n.b, m: n.p, ...(n.tie ? { tie: true } : {}) }));
+    // 聴き比べ用の声：歌った部分だけを切り出す。フレーズの頭の拍に、歌い出しの位置が合うように、頭に無音を入れる
+    const raw = await ctx.decodeAudioData(await file.arrayBuffer());
+    resing.clip = { buf: raw, from: Math.max(0, first - 0.05), to: Math.min(raw.duration, ns[ns.length - 1].t1 + 0.3), lead: (o0 - ph.s) * tau, gain: Math.min(12, res.boost || 1) };
+    msg(`${resing.notes.length}音を読み取りました。「試しに聴く」で確かめてください。`);
+  } catch (e) {
+    msg('読み取れませんでした：' + e.message);
+  } finally {
+    resing.busy = false; resingRender();
+  }
+}
+function resingTry() {
+  if (!resing.notes) return;
+  stop(); audio();
+  const beat = 60 / song.bpm, at = ctx.currentTime + 0.15, o0 = resing.notes[0].t;
+  for (const n of resing.notes) note(master, n.m, at + (n.t - o0) * beat, n.d * beat, 0.7);
+}
+async function resingApply() {
+  const { sec, ph, notes, clip } = resing;
+  if (!notes) return;
+  sec.melody = sec.melody.filter(n => !(n.t >= ph.s - 1e-6 && n.t < ph.e - 1e-6));
+  for (const n of sec.melody) if (n.t < ph.s && n.t + n.d > notes[0].t) n.d = Math.max(0.125, notes[0].t - n.t);   // 前から伸びている音は、歌い直した音の手前まで
+  sec.melody.push(...notes);
+  sec.melody.sort((a, b) => a.t - b.t || b.m - a.m);
+  // 元の歌：今の録音のうしろに、歌い直した声をつなげて、このフレーズの区間だけそちらを指すようにする（前の声は残るので、↶ で戻せる）
+  const g = (sec.guide || []).find(x => Math.abs(x.beat - ph.s) < 1e-6);
+  if (g && clip && guide.buffer && guide.id === song.guideId) {
+    const old = guide.buffer, SR = old.sampleRate, lead = Math.round(clip.lead * SR), n0 = Math.round(clip.from * SR), n1 = Math.round(clip.to * SR);
+    const nb = ctx.createBuffer(2, old.length + lead + (n1 - n0), SR), k = clip.gain / (song.guideGain || 1);
+    for (let c = 0; c < 2; c++) {
+      const dst = nb.getChannelData(c);
+      dst.set(old.getChannelData(Math.min(c, old.numberOfChannels - 1)));
+      const src = clip.buf.getChannelData(Math.min(c, clip.buf.numberOfChannels - 1));
+      for (let i = n0, j = old.length + lead; i < n1; i++, j++) dst[j] = Math.max(-1, Math.min(1, src[i] * k));
+    }
+    g.t0 = +(old.duration + 0.05).toFixed(3); g.t1 = +(nb.duration).toFixed(3);
+    guide.buffer = nb;
+    try {
+      const wav = encodeWav(nb), blob = wav instanceof Blob ? wav : new Blob([wav], { type: 'audio/wav' });
+      guide.blob = blob;
+      await idb('readwrite', st => st.put({ id: song.guideId, blob }, 'latest'));
+    } catch (e) { /* 保存できなくても、この画面の間は使える */ }
+  }
+  ui.sel = -1; ui.note = -1;
+  $('#resingModal').hidden = true;
+  changed();
 }
 // セクション全体の長さを f 倍にする（メロディ・コード・元の歌の行の位置）
 function stretchSection(sec, f) {
@@ -1788,10 +2065,12 @@ function renderSettings() {
   $('#pattern').value = song.pattern;
   $('#instrument').value = song.instrument;
   $('#drums').checked = song.drums;
+  $('#drumKit').value = song.drumKit || 'rock'; $('#drumKit').disabled = !song.drums;
   $('#loop').checked = song.loop;
   $('#guideWrap').hidden = !(guide.buffer && guide.id === song.guideId);
   $('#syncBtn').hidden = !(song.importInfo?.lyrics?.trim() && guide.buffer && guide.id === song.guideId);
   $('#listen').value = listenMode();
+  renderPhraseNote();
   $('#modeBtn').textContent = song.mode === 'minor' ? '明るくする（短調 → 長調）' : '暗くする（長調 → 短調）';
   $('#modeBtn').title = song.mode === 'minor'
     ? '曲全体を、同じ主音の長調に直します。メロディの一部の音が半音上がり、コードは付け直します'
@@ -2222,6 +2501,14 @@ function renderRuler(g = rollGeom()) {
     c2.beginPath(); c2.moveTo(x, b % 4 ? H - 4 : 0); c2.lineTo(x, H); c2.stroke();
     if (b % 4 === 0) { c2.fillStyle = col('--muted'); c2.fillText(b / 4 + 1, x + 4, H / 2); }
   }
+  // フレーズ（元の歌の区間）の区切りと、選ばれているフレーズ
+  const ph = phraseAt(g.sec);
+  if (ph) {
+    c2.fillStyle = 'rgba(31, 157, 85, .16)';
+    c2.fillRect(ph.s * g.ppb, 0, (ph.e - ph.s) * g.ppb, H);
+    c2.fillStyle = '#1f9d55';
+    for (const x of g.sec.guide) if (x.beat < g.total) c2.fillRect(Math.round(x.beat * g.ppb), H - 4, 2, 4);
+  }
   const st = ui.start && ui.start.sec === g.sec.id ? ui.start.beat : null;
   if (st !== null && st < g.total) {
     const x = st * g.ppb;
@@ -2235,6 +2522,7 @@ function setStart(beat) {
   ui.start = beat === null ? null : { sec: sec.id, beat };
   if (playback && playback.from) { const k = playback.kind; stop(); play(k); }   // 再生中なら、そこから鳴らし直す
   else renderRoll();
+  renderPhraseNote();
 }
 function rulerDown(e) {
   const g = rollGeom();
@@ -3016,10 +3304,11 @@ function importLines(lyricsText) {
 //       v1：行ごとに半音未満のずれを1つの値で直して丸める
 //       v2：縮んだ音程の幅を広げ、基準の高さを音ごとに追い、上がり下がりの形（輪郭）を守りながら音階の音に寄せる
 //           （根拠は docs/correction-research.md）
-// 標準は v1。方針（2026-10-05）：自動では、曲全体の高さ（キー）は動かさず、音どうしのバランス（音程のずれ）だけ整える。
-// 曲全体の高さは、人が「全体の高さ」のボタンで上げ下げする。
-// v2 は公開データのテストでは良い（音が合う 70% → 83%）が、実際に自由に歌った録音で聴き比べると、元の歌からかけ離れて聞こえた（行ごとに基準の高さを動かすため）。経緯は tests/README.md
-const PITCH_METHOD = 'v1';
+// 標準は raw（歌ったまま）。同じ録音を、歌ったまま・キーの音に寄せる（近いほうへ）・前の寄せ方、の3通りで音にして聴き比べ、
+// 歌ったままが原曲どおりだった（2026-10-05）。キーの音に寄せるのは、読み込みの画面で選んだときだけにする。
+// 曲全体の高さは、人が「高さ ▼▲」で上げ下げする。
+// v1 は前の標準。v2 は公開データのテストでは良いが、実際の録音で聴くと元の歌からかけ離れて聞こえた。経緯は tests/README.md
+const PITCH_METHOD = 'raw';
 const KEY_MAJ = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88], KEY_MIN = [6.33, 2.68, 3.52, 5.38, 2.6, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
 const medOf = a => { const s = [...a].sort((p, q) => p - q); return s[s.length >> 1]; };
 // キー：12音の分布（音の長さで重み付け）を、長調・短調の典型と比べる
@@ -3035,7 +3324,6 @@ function keyFromHist(hist) {
 // キー（長調・短調とも）の音階の12音の集合
 const scaleOfKey = key => new Set([0, 2, 4, 5, 7, 9, 11].map(x => (key.k + (key.mode === 'minor' ? 3 : 0) + x) % 12));
 // キーから外れた音を、近い音階の音へ（上を先に試す）
-const snapNoteToScale = (m, scale) => scale.has(((m % 12) + 12) % 12) ? m : m + [1, -1, 2, -2].find(d => scale.has(((m + d) % 12 + 12) % 12));
 function pitchStage(lines, opts) {
   const method = opts.pitch || PITCH_METHOD;
   // 前後よりずっと低い（高い）のは、声の高さを1オクターブ取り違えたもの
@@ -3044,6 +3332,16 @@ function pitchStage(lines, opts) {
     for (const n of l.notes) { while (n.m < center - 8) n.m += 12; while (n.m > center + 8) n.m -= 12; }
   }
   const key = method === 'v2' ? pitchV2(lines, opts) : method === 'v1' ? pitchV1(lines) : pitchRaw(lines);
+  // キーの音に寄せる（選んだときだけ）：歌った高さ（n.f）に、いちばん近い音階の音へ。
+  // 前は「まず半音上」を試していたので、下の音に近くても上へ動き、歌った高さから1半音より大きくずれる音が出ていた
+  if (opts.snapKey && method !== 'v2') {
+    const scale = scaleOfKey(key);
+    for (const l of lines) for (const n of l.notes) {
+      let best = null;
+      for (let c = Math.round(n.f) - 2; c <= Math.round(n.f) + 2; c++) if (scale.has(((c % 12) + 12) % 12) && (best === null || Math.abs(c - n.f) < Math.abs(best - n.f))) best = c;
+      n.p = best ?? n.p;
+    }
+  }
   for (const l of lines) for (const n of l.notes) n.p += 12 * (opts.octave || 0);
   return key;
 }
@@ -3054,7 +3352,7 @@ function pitchRaw(lines) {
   for (const l of lines) for (const n of l.notes) { const w = n.t1 - n.t0, a = (n.m - Math.round(n.m)) * 2 * Math.PI; sx += w * Math.cos(a); sy += w * Math.sin(a); }
   const off = Math.atan2(sy, sx) / (2 * Math.PI);
   const hist = new Array(12).fill(0);
-  for (const l of lines) for (const n of l.notes) { n.p = Math.round(n.m - off); hist[((n.p % 12) + 12) % 12] += n.t1 - n.t0; }
+  for (const l of lines) for (const n of l.notes) { n.f = n.m - off; n.p = Math.round(n.f); hist[((n.p % 12) + 12) % 12] += n.t1 - n.t0; }
   return keyFromHist(hist);
 }
 function pitchV1(lines) {
@@ -3062,7 +3360,7 @@ function pitchV1(lines) {
     let sx = 0, sy = 0;
     for (const n of l.notes) { const w = n.t1 - n.t0, a = (n.m - Math.round(n.m)) * 2 * Math.PI; sx += w * Math.cos(a); sy += w * Math.sin(a); }
     const offc = Math.atan2(sy, sx) / (2 * Math.PI);
-    for (const n of l.notes) n.p = Math.round(n.m - offc);
+    for (const n of l.notes) { n.f = n.m - offc; n.p = Math.round(n.f); }
   }
   const hist = new Array(12).fill(0);
   for (const l of lines) for (const n of l.notes) hist[((n.p % 12) + 12) % 12] += n.t1 - n.t0;
@@ -3179,6 +3477,84 @@ function pitchV2(lines, opts) {
 }
 
 // ================= 拍へのあてはめ =================
+// 歌から拍を見つけて、音を拍に置く（2026-10-05。聴き比べの経緯は tests/README.md）。
+// 「歌詞1行＝決まった小節数」とは決めない。行ごとに引き伸ばすと、行によって伸ばす割合が変わり、ことばの間（ま）や歌のテンポが崩れる。
+//   1. 歌い出しの候補：行の頭と、0.3 秒以上の間のあとの音
+//   2. フレーズの周期：歌い出しの間隔のうち、いちばん多く集まっている長さ。1拍が 0.33〜0.67 秒になるように 1・2・4 小節とみる
+//   3. 小節の頭に置く歌い出しを選ぶ（動的計画法）。行の頭は必ず置く。休みの長さ・テンポのゆれは、ここでフレーズごとに打ち消される
+//   4. その間の音は、まわりの区間の速さ（前後2区間をふくむ真ん中の値）で拍に直し、刻みに置く。前の音と重なるときだけ刻みを半分にする
+// 行ごとに l.bars（次の行の頭までの小節数）、l.guides（元の歌の区間。beat は行の頭から）、音ごとに n.b〜n.e（行の頭が 0）を入れる。
+// 「速く歌った」と「短いフレーズだった」は見分けられない（人が直す）。フレーズの周期が見つからなければ null を返す
+function beatStage(lines, opts) {
+  const used = lines.filter(l => l.notes.length);
+  const notes = used.flatMap(l => l.notes.map((n, i) => ({ n, l, first: i === 0 })));
+  if (notes.length < 8) return null;
+  const cand = notes.filter((x, i) => !i || x.first || x.n.t0 - notes[i - 1].n.t1 >= 0.3).map(x => ({ t: x.n.t0, line: x.first }));
+  const iv = cand.slice(1).map((c, i) => c.t - cand[i].t);
+  if (iv.length < 3) return null;
+  let U = 0, cnt = 0;
+  for (const u of iv) { const near = iv.filter(v => Math.abs(v / u - 1) <= 0.15); if (near.length > cnt) { cnt = near.length; U = medOf(near); } }
+  if (cnt < Math.max(3, iv.length * 0.3)) return null;
+  const upb = [1, 2, 4].find(k => U / (4 * k) <= 0.67) || 4, G = U / upb;
+  // 区間の費用＝（その区間の1小節の長さが G からどれだけ離れるか ÷ 15%）²。周期の整数倍でない小節数は不利にする
+  const segCost = I => {
+    let best = [Infinity, 1];
+    for (let k = 1; k <= Math.max(1, Math.round(I / G) + 2); k++) { const c = (Math.log(I / (k * G)) / 0.15) ** 2 + (k % upb ? 1 : 0); if (c < best[0]) best = [c, k]; }
+    return best;
+  };
+  const dp = cand.map(() => ({ c: Infinity, from: -1, k: 0 }));
+  dp[0].c = 0;
+  for (let i = 1; i < cand.length; i++) for (let j = i - 1; j >= 0; j--) {
+    if (dp[j].c < Infinity) { const [c, k] = segCost(cand[i].t - cand[j].t), tot = dp[j].c + c - (cand[i].line ? 0 : 2.5); if (tot < dp[i].c) dp[i] = { c: tot, from: j, k }; }
+    if (cand[j].line) break;                                // 行の頭は飛ばせない
+  }
+  let endI = cand.length - 1;
+  for (let j = cand.length - 1; j >= 0; j--) { if (dp[j].c < dp[endI].c) endI = j; if (cand[j].line) break; }
+  const anchors = [];
+  for (let i = endI; i >= 0; i = dp[i].from) anchors.unshift({ t: cand[i].t, k: dp[i].k, line: cand[i].line });
+  let bar = 0;
+  for (const a of anchors) { bar += a.k; a.bar = bar; }
+  const segBar = anchors.slice(1).map((a, i) => (a.t - anchors[i].t) / (a.bar - anchors[i].bar));
+  if (!segBar.length) return null;
+  const tauOf = i => medOf(segBar.slice(Math.max(0, i - 2), i + 3)) / 4;
+  const grid = opts.grid, fine = grid / 2;
+  let ai = 0, prev = null;
+  for (const x of notes) {
+    while (ai < anchors.length - 1 && anchors[ai + 1].t <= x.n.t0 + 1e-6) ai++;
+    const a = anchors[ai], nx = anchors[ai + 1], tau = tauOf(Math.min(ai, segBar.length - 1));
+    const raw = (x.n.t0 - a.t) / tau, lim = nx ? (nx.bar - a.bar) * 4 : Infinity;
+    let b = Math.round(raw / grid) * grid;
+    if (prev && prev.seg === ai && b <= prev.b) b = Math.max(prev.b + fine, Math.round(raw / fine) * fine);
+    if (b > lim - fine) b = lim - fine;
+    if (prev && prev.seg === ai && b <= prev.b) b = prev.b + fine;
+    x.seg = ai; x.b = b; x.abs = a.bar * 4 + b; x.rawEnd = a.bar * 4 + (x.n.t1 - a.t) / tau;
+    prev = x;
+  }
+  notes.forEach((x, i) => { const nx = notes[i + 1]; x.end = Math.min(Math.max(x.abs + fine, Math.round(x.rawEnd / fine) * fine), nx ? nx.abs : Infinity); if (x.end <= x.abs) x.end = x.abs + fine / 2; });
+  // 行ごとにまとめる。パートの最後の行は、音のある小節まで（パートとパートの間の長い休みは、パートに入れない）
+  used.forEach((l, li) => {
+    const mine = notes.filter(x => x.l === l), next = used[li + 1];
+    const s = anchors.findIndex(a => Math.abs(a.t - l.notes[0].t0) < 1e-6), startBar = anchors[s].bar;
+    const need = Math.ceil(Math.max(...mine.map(x => x.end)) / 4 - 1e-9) - startBar;
+    const toNext = next ? anchors.find(a => Math.abs(a.t - next.notes[0].t0) < 1e-6).bar - startBar : Infinity;
+    const even = Math.ceil(need / upb) * upb;
+    l.bars = next && next.bi === l.bi ? toNext : Math.min(toNext, even);
+    for (const x of mine) { x.n.b = x.abs - startBar * 4; x.n.e = Math.min(x.end - startBar * 4, l.bars * 4); }
+    const lastT = l.notes[l.notes.length - 1].t1 + 0.6;
+    l.guides = [];
+    for (let i = s; i < anchors.length && (i === s || !anchors[i].line); i++) {
+      const beat = (anchors[i].bar - startBar) * 4;
+      if (beat >= l.bars * 4) break;
+      l.guides.push({ beat, t0: anchors[i].t, t1: Math.min(lastT, anchors[i + 1] ? anchors[i + 1].t : lastT), ...(i > s ? { sub: true } : {}) });
+    }
+    l.ls = l.notes[0].t0; l.le = next ? next.notes[0].t0 : lastT;
+    l.guide = { t0: l.ls, t1: l.le };
+  });
+  // テンポ：歌は後ろへ行くほど走りやすいので、頭の4区間（走る前）を基準にする。うしろの区間は、区間ごとの速さで拍に直しているので、
+  // 走った分は拍の上では打ち消されている。音の間隔からテンポを測る案は、合い方がはっきり出ず使えなかった（tests/README.md）
+  return Math.round(Math.min(180, Math.max(50, 240 / medOf(segBar.slice(0, 4)))));
+}
+
 // 行ごとに、音の時刻（秒）を拍の位置（n.b〜n.e。行の頭が 0、1行は opts.barsPerLine 小節）に直す。テンポ（BPM）を返す
 // 方式  v1：行の歌い出しから次の行の歌い出しまでを、1行の長さに均等に伸び縮みさせる（行の間の休みが長いと、音が詰まる）
 //       v2：行ごとに、音の始まりがいちばん拍の刻みに乗るテンポを探す（行の間の休みの長さに左右されない）
@@ -3186,13 +3562,39 @@ function pitchV2(lines, opts) {
 // （歌詞の長さが行ごとに違い、行ごとに速さが変わるため）。それで標準は v1 のまま。経緯は tests/README.md
 const RHYTHM_METHOD = 'v1';
 function rhythmStage(lines, opts) {
-  const B = opts.barsPerLine * 4, grid = opts.grid, method = opts.rhythm || RHYTHM_METHOD;
+  const method = opts.rhythm || RHYTHM_METHOD;
+  // 1行の小節数が「自動」のときは、まず歌から拍を見つける。決まった長さのフレーズが見つからない歌は、下の方式（行ごとに引き伸ばす）で
+  if (!opts.barsPerLine && !opts.rhythm) { const bpm = beatStage(lines, opts); if (bpm) return bpm; }
   const P = { lambda: 0.3, mu1: 0.5, mu2: 1.0, thr: 0.6, up: 2, low: 0.6, ...(opts.r2 || {}) };
   const used = lines.filter(l => l.notes.length);
-  if (!used.length) return 92;
+  if (!used.length) { if (!opts.barsPerLine) opts.barsPerLine = 2; return 92; }
   // 行の始まりと、次の行の始まり（最後の行は、最後の音の終わり＋0.6秒）
   used.forEach((l, i) => { l.ls = l.notes[0].t0; l.le = used[i + 1] ? used[i + 1].notes[0].t0 : l.notes[l.notes.length - 1].t1 + 0.6; });
   const spans = used.map(l => Math.max(0.5, l.le - l.ls));
+  // 1行の小節数が「自動」（0）のとき：速く歌った音が刻みに入りきらず後ろへ押し出されると、歌の途中の間（ま）が消えて、
+  // 次のことばが間をおかずに始まってしまう。押し出される音が 15% 以下になる、いちばん短い小節数を選ぶ。
+  // テンポが速くなりすぎる（180 を超える）ときは、小節数はそのままで、刻みを半分（16分音符）にする
+  if (!opts.barsPerLine) {
+    const pushed = (bars, grid) => {
+      let bad = 0, all = 0;
+      used.forEach((l, li) => {
+        const tau = spans[li] / (bars * 4);
+        let last = -grid;
+        for (const n of l.notes) {
+          const want = Math.round((n.t0 - l.ls) / tau / grid) * grid, b = Math.min(bars * 4 - grid, Math.max(last + grid, want));
+          if (Math.abs(b - want) >= grid) bad++;
+          all++; last = b;
+        }
+      });
+      return bad / all;
+    };
+    const bpmOf = bars => 60 / (medOf(spans) / (bars * 4));
+    const cands = [[1, opts.grid], [2, opts.grid], [4, opts.grid], ...(opts.grid >= 0.5 ? [[2, opts.grid / 2], [4, opts.grid / 2]] : [])].filter(c => bpmOf(c[0]) <= 180);
+    const pick = cands.find(c => pushed(...c) <= 0.15) || cands[cands.length - 1] || [2, opts.grid];
+    opts.barsPerLine = pick[0]; opts.grid = pick[1];
+  }
+  const grid = opts.grid;
+  const B = opts.barsPerLine * 4;
   const tauSpan = medOf(spans) / B;                         // 1拍の秒数の目安（行の長さの真ん中の値から）
   let taus = spans.map(sp => sp / B);
   if (method === 'v2') {
@@ -3447,16 +3849,20 @@ function buildImportedSong(res, opts, fileName) {
     sec.verses[verse] = b.lines.some(t => t) ? b.lines.join('\n') : '';
     sg.arrangement.push(sec.id);
     if (verse > 0) return;                                  // メロディとガイドは1回目に歌った分を使う（2番以降は歌詞だけ）
+    let at = 0;                                             // この行の頭（拍）。拍を歌から見つけたときは、行ごとに長さが違う
     res.lines.filter(l => l.bi === bi).forEach((l, li) => {
+      const base = l.bars === undefined ? li * bpl : at;
+      at += (l.bars || 0) * 4;
       for (const n of l.notes || []) {
         if (n.b === undefined) continue;
-        const note = { t: li * bpl + n.b, d: n.e - n.b, m: n.p, r: [+n.t0.toFixed(2), +n.t1.toFixed(2)] };   // r：歌った時刻（秒）。リズムを組み直すときに使う
+        const note = { t: base + n.b, d: n.e - n.b, m: n.p, r: [+n.t0.toFixed(2), +n.t1.toFixed(2)] };   // r：歌った時刻（秒）。リズムを組み直すときに使う
         if (n.tie) note.tie = true;
         sec.melody.push(note);
       }
-      if (l.guide) sec.guide.push({ beat: li * bpl, t0: l.guide.t0, t1: l.guide.t1 });
+      if (l.guides) for (const g of l.guides) sec.guide.push({ ...g, beat: base + g.beat, t0: +g.t0.toFixed(3), t1: +g.t1.toFixed(3) });
+      else if (l.guide) sec.guide.push({ beat: li * bpl, t0: l.guide.t0, t1: l.guide.t1 });
     });
-    sec.bars = b.lines.length * opts.barsPerLine;
+    sec.bars = at ? at / 4 : b.lines.length * opts.barsPerLine;
   });
   sg.current = sg.sections[0].id;
   return sg;
@@ -3582,12 +3988,8 @@ async function importVoice(file, name, lyricsText, opts, starts, progress) {
     await yieldUI();
     const sg = migrate(buildImportedSong(res, opts, file.name));
     const prevSong = song;
-    song = sg;                                              // コード付け・キーへの寄せは、新しい曲の上で行う
+    song = sg;                                              // コード付けは、新しい曲の上で行う
     for (const sec of song.sections) {
-      if (opts.snapKey) {
-        const scale = new Set([0, 2, 4, 5, 7, 9, 11].map(x => (secKey(sec).pc + x) % 12));
-        for (const n of sec.melody) n.m = snapNoteToScale(n.m, scale);
-      }
       harmonize(sec, Math.max(1, sec.bars || Math.ceil(Math.max(0, ...sec.melody.map(n => n.t + n.d)) / 4)));
       delete sec.bars;
     }
@@ -3705,12 +4107,18 @@ function applyFix(all) {
 // しっかり：さらに歌詞の1行ごとに、音符の数を歌詞の音の数に合わせ（多い音は「のばし」に、足りなければ長い音を分ける）、
 //           行の最後の音を行の終わりの半拍前まで伸ばす
 // 歌詞の行の区切り：元の歌の行の位置があればそれを、なければセクションを行の数で等分する
+// 元の歌の区間を、歌詞の行ごとにまとめたもの（拍を歌から見つけた曲では、1行の中にフレーズごとの区間 sub がある）
+function lineGuide(sec) {
+  const out = [];
+  for (const g of sec.guide || []) { if (g.sub && out.length) out[out.length - 1].t1 = g.t1; else out.push({ beat: g.beat, t0: g.t0, t1: g.t1 }); }
+  return out;
+}
 function lineSpans(sec) {
   const total = secBeats(sec);
   const lines = parseLyrics(verseText(sec), song.lyrExt).lines.filter(l => l.mora.length);
   // 行の中の区切り（歌詞の空白で分けた、まとまりごとの音の数）
   for (const l of lines) l.parts = l.text.split(/[\s　]+/).map(t => parseLyrics(t, song.lyrExt).all.length).filter(c => c > 0);
-  const g = sec.guide || [];
+  const g = lineGuide(sec);
   if (lines.length && g.length === lines.length)
     return lines.map((l, i) => ({ s: g[i].beat, e: i + 1 < g.length ? g[i + 1].beat : total, mora: l.mora.length, parts: l.parts }));
   if (lines.length && total % lines.length === 0)
@@ -3789,7 +4197,7 @@ function moraGrid(src, sp, unit) {
 //   ・パートの長さ（小節数）は、中身の量で決まる
 // 戻り値は { mel, guide, bars, ioi }（guide は元の歌の行の新しい位置、ioi は刻み1つあたりの歌った秒数の真ん中の値）。音の高さは変えない
 function gapGrid(sec, unit) {
-  const spans = lineSpans(sec), g = sec.guide || [], total = secBeats(sec), beat = 60 / song.bpm;
+  const spans = lineSpans(sec), g = lineGuide(sec), total = secBeats(sec), beat = 60 / song.bpm;
   const src = [...sec.melody].filter(n => n.t < total).sort((a, b) => a.t - b.t || b.m - a.m);
   if (!src.length) return null;
   // 歌った時刻（秒）：読み込みのときに残した値があればそれを、なければ行の位置から逆算する
@@ -3999,7 +4407,7 @@ function exportMidi() {
   }
   if (song.drums) {
     const dr = [];
-    drumHits(plan.total).forEach(h => noteEvs(dr, 9, h.n, h.t, 0.25, h.n === 42 ? Math.round(h.v * 700) : 100));
+    drumHits(plan.total).forEach(h => noteEvs(dr, 9, h.n, h.t, 0.25, h.n === 42 ? Math.round(h.v * 700) : h.n === 44 ? Math.round(h.v * 450) : 100));
     tracks.push(track('Drums', dr));
   }
   const bytes = [...ascii('MThd'), ...u32(6), 0, 1, 0, tracks.length, 480 >> 8, 480 & 255, ...tracks.flat()];
@@ -4046,11 +4454,13 @@ async function exportAudio() {
     if (song.drums) for (const h of drumHits(plan.total)) DRUM[h.n](master, lead + h.t * beat, h.v);
     for (const n of plan.mel) note(master, n.m, lead + n.t * beat, n.d * beat, 0.7);
     if (song.guideOn && guide.buffer && guide.id === song.guideId) {
-      for (const mk of plan.markers) for (const g of secById(mk.sid)?.guide || []) {
-        const src = off.createBufferSource(), gn = off.createGain();
-        src.buffer = guide.buffer; gn.gain.value = 1.1 * (song.guideGain || 1);
+      for (const mk of plan.markers) for (const { g, slot } of guideSlots(secById(mk.sid))) {
+        const src = off.createBufferSource(), gn = off.createGain(), vol = 1.1 * (song.guideGain || 1);
+        const ga = lead + (mk.t + g.beat) * beat, full = g.t1 - g.t0 + 0.05, dur = Math.min(full, slot * beat);
+        src.buffer = guide.buffer; gn.gain.value = vol;
+        if (dur < full && dur > 0.05) { gn.gain.setValueAtTime(vol, ga + dur - 0.04); gn.gain.linearRampToValueAtTime(0, ga + dur); }
         src.connect(gn).connect(master);
-        src.start(lead + (mk.t + g.beat) * beat, Math.max(0, g.t0 - 0.05), g.t1 - g.t0 + 0.05);
+        src.start(ga, Math.max(0, g.t0 - 0.05), dur);
       }
     }
   } finally {
@@ -4470,6 +4880,7 @@ $('#instrument').onchange = e => {
   if (c) preview(c);
 };
 $('#drums').onchange = e => { song.drums = e.target.checked; changed(); };
+$('#drumKit').onchange = e => { song.drumKit = e.target.value; if (playback) { const k = playback.kind; stop(); changed(); play(k); } else changed(); };
 $('#loop').onchange = e => { song.loop = e.target.checked; changed(); };
 // 右パネルの「コード候補／歌詞」タブ
 function setSideTab(name) {
@@ -4594,6 +5005,15 @@ $('#harmBtn').onclick = () => {
 };
 $('#fixBtn').onclick = openFix;
 $('#rhyBtn').onclick = openRhythm;
+$('#phrResing').onclick = openResing;
+$('#resingRec').onclick = () => resing.rec ? resingStop() : resingStart();
+$('#resingCancel').onclick = closeResing;
+$('#resingTry').onclick = resingTry;
+$('#resingApply').onclick = resingApply;
+$('#phrDouble').onclick = () => editPhrase('double');
+$('#phrHalf').onclick = () => editPhrase('half');
+$('#phrGapAdd').onclick = () => editPhrase('gapAdd');
+$('#phrGapCut').onclick = () => editPhrase('gapCut');
 $('#modeBtn').onclick = () => {
   const to = song.mode === 'minor' ? 'major' : 'minor';
   if (!confirm(`曲全体を、${to === 'major' ? '長調（明るい響き）' : '短調（暗い響き）'}に直します。\nメロディの一部の音が半音${to === 'major' ? '上がり' : '下がり'}、コードは付け直します。（↶ で戻せます）`)) return;
@@ -4687,6 +5107,7 @@ document.addEventListener('click', e => { if (e.target.closest('button')) e.targ
 window.addEventListener('keydown', e => {
   if (!$('#lyrModal').hidden) { if (e.key === 'Escape') closeSongLyrics(); return; }
   if (!$('#impModal').hidden) { if (e.key === 'Escape') closeImport(); return; }
+  if (!$('#resingModal').hidden) { if (e.key === 'Escape') closeResing(); return; }
   if (!$('#syncModal').hidden) {
     if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) syncTap(); }
     else if (e.key === 'Backspace') { e.preventDefault(); sync.taps.pop(); renderSync(); }

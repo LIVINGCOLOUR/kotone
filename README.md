@@ -11,11 +11,11 @@
 
 ## 紹介動画
 
-### 歌って作る（3分44秒）
+### 歌って作る（2分18秒）
 
-[![Kotone 紹介動画：歌詞を入れ、マイクに向かって歌い、できたメロディを整えて書き出す様子](media/kotone-sing-thumb.jpg)](https://kotonemusic.pages.dev/sing.mp4)
+[![Kotone 紹介動画：歌詞を入れ、マイクに向かって歌い、できた下書きを整えて直し、書き出す様子](media/kotone-sing-thumb.jpg)](https://kotonemusic.pages.dev/sing.mp4)
 
-▶ [動画を見る（ブラウザで再生）](https://kotonemusic.pages.dev/sing.mp4) ― 歌詞を入れる → 録音して歌う → メロディとコードができる → 元の歌と聴き比べる → 「歌詞で組む」で拍を整える → 気になる音を直す → 「明るくする」で長調に直す → 通して再生 → MP3・歌詞カード・ピアノ譜の書き出し まで。楽器も楽譜も使いません。歌声は、歌詞を見ながら思いついた節で自由に歌った録音です。
+▶ [動画を見る（ブラウザで再生）](https://kotonemusic.pages.dev/sing.mp4) ― 歌詞を入れる → 録音して歌う → メロディとコードの下書きができる → 「リズムを整える」「明るくする」「音程を整える」で整える → 元の歌と聴き比べる → 違う音を直す → 伴奏とドラムを付けて通して再生 → 歌詞カード・ピアノ譜 まで。歌声は、先に用意した曲の Aメロを、人が伴奏なしで歌った録音です。画面に出る下書きは、その録音をアプリが実際に読み取ったものです。速い歌なので直す音が多く、動画では2音を直して見せ、残りは省いています。最後に流れるサビは、歌から作ったものではなく、あらかじめ用意したメロディです。
 
 ### コードを選んで、鍵盤で作る（2分56秒）
 
@@ -45,9 +45,12 @@ Cloudflare Pages（プロジェクト名 `kotonemusic`）で公開していま�
 cd video
 npm install
 node make-video.mjs        # コードを選んで鍵盤で作る → video/out/kotone-intro.mp4（約3分で完成）
-node make-video-sing.mjs   # 歌って作る → video/out-sing/kotone-sing.mp4（約4分で完成）
+node make-video-sing2.mjs  # 歌って作る（公開している版） → video/out-sing2/kotone-sing-short.mp4（約3分で完成）
+node make-video-sing.mjs   # 歌って作る（前の長い版） → video/out-sing/kotone-sing.mp4（約4分で完成）
 ```
 
-「歌って作る」の動画の歌詞は `video/sing-song.mjs` にあります。歌声は、`songs/video/my-voice.m4a`（人が歌った録音。Git の管理外）があればそれを使い、なければ同じファイルにある合成の声を使います。どちらも、マイクの代わりに Chrome へ流しています。
+公開している「歌って作る」（`make-video-sing2.mjs`）は、手元で動かしているアプリ（`http://localhost:8766/`）を撮ります。曲のデータと、人が歌った録音（`songs/cand/`。Git の管理外）が要るので、そのままでは作り直せません。録音は、マイクの代わりに Chrome へ流しています。
+
+前の長い版（`make-video-sing.mjs`）の歌詞は `video/sing-song.mjs` にあります。歌声は、`songs/video/my-voice.m4a`（人が歌った録音。Git の管理外）があればそれを使い、なければ同じファイルにある合成の声を使います。
 
 字幕の文言、歌詞、メロディ、待ち時間はスクリプトの中で変えられます。音は録画中に鳴らした音の記録から、録画後にオフラインで作り直しています（録画中の処理の重さで音が乱れないように）。
