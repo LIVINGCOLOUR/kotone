@@ -6,4 +6,5 @@ rm -rf dist
 mkdir dist
 cp index.html manual.html dist/
 cp media/kotone-intro.mp4 dist/intro.mp4   # 紹介動画（ブラウザでそのまま再生できるように）
+cp media/kotone-sing.mp4 dist/sing.mp4
 npx wrangler pages deploy dist --project-name kotonemusic --branch main
