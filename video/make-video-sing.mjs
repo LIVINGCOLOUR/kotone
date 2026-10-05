@@ -354,6 +354,26 @@ if (fix) {
   await sleep(2000);
   console.log('fixed note:', fix.m, '→', await page.evaluate(t => song.sections[0].melody.find(x => !x.tie && x.t === t)?.m, fix.t), 'want', fix.want);
 } else console.log('fix scene skipped (no outlier)');
+// 短調（暗い響き）になったときは、「明るくする」で長調に直す
+if (await page.evaluate(() => song.mode === 'minor')) {
+  await cap('暗く聞こえるときは、「整える」の「明るくする」で、長調に直せます');
+  await click('#toolMenu summary');
+  await sleep(700);
+  await spot('#modeBtn', 3);
+  await sleep(2600);
+  await spot(null);
+  await click('#modeBtn', 400);
+  await sleep(1200);
+  await spot('#track', 2);
+  await cap('メロディの一部の音が半音上がり、コードが明るい響きに変わりました');
+  await sleep(3600);
+  await spot(null);
+  await click('#playSec');
+  await sleep(7500);
+  await click('#playSec', 300);
+  await sleep(500);
+  console.log('mode:', await page.evaluate(() => keyInfo(song.tonic, song.mode).name + ' ／ ' + song.sections.map(s => s.chords.map(c => chordInfo(c, secKey(s)).name).join(' ')).join(' ｜ ')));
+}
 // 全体の高さ
 await spot('#xpose', 6);
 if (REAL) {

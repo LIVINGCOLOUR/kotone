@@ -371,6 +371,7 @@
             <button id="rhyBtn" title="歌って作ったメロディの、音の始まりと長さをそろえます（歌詞の音の数に合わせることもできます）">リズムを整える</button>
             <button id="fixBtn" title="コードとぶつかる音・キーから外れた音を見つけて、まとめて直します">音程を整える（理論チェック）</button>
             <button id="harmBtn" title="このセクションのメロディに合うコードを、1小節ずつ付け直します">コードを付ける</button>
+            <button id="modeBtn"></button>
             <button id="fancy" title="コードを 7th などに変えて、響きをおしゃれにします">コードをおしゃれにする</button>
             <button id="clear" title="このセクションのコードとメロディを消します（↶ で戻せます）">クリア</button>
           </div>
@@ -1661,6 +1662,26 @@ function transposeSong(d) {
   if (playback) { const k = playback.kind; stop(); changed(); play(k); } else changed();
 }
 
+// 曲全体を、同じ主音の長調（明るい響き）／短調（暗い響き）に直す。人がボタンを押したときだけ行う。
+//   メロディ：音階の3番目・6番目・7番目の音を、半音上げる（長調へ）／下げる（短調へ）。上がり下がりの形は変わらない
+//   コード：メロディのあるセクションは付け直す。メロディのないセクションは、鳴る音が変わらないようにコードの表し方だけを直す
+function changeMode(to) {
+  if (song.mode === to) return;
+  const up = to === 'major', from = up ? [3, 8, 10] : [4, 9, 11];
+  for (const sec of song.sections) {
+    const t = ((song.tonic + sec.shift) % 12 + 12) % 12;
+    for (const n of sec.melody) if (from.includes(((n.m - t) % 12 + 12) % 12)) n.m += up ? 1 : -1;
+    if (!sec.melody.length) sec.chords = sec.chords.map(c => {      // 数え方の基準（平行長調の主音）が3半音動くので、その分ずらす
+      const g = getChord(c.id);
+      return { ...c, id: `@${((g.off + (up ? 3 : -3)) % 12 + 12) % 12}:${g.q}` };
+    });
+  }
+  song.mode = to;
+  for (const sec of song.sections) if (sec.melody.length && sec.chords.length) harmonize(sec, Math.max(1, Math.ceil(secBeats(sec) / 4)));
+  ui.sel = -1; ui.note = -1; ui.fix = null; ui.rhy = null;
+  if (playback) { const k = playback.kind; stop(); changed(); play(k); } else changed();
+}
+
 function selectSection(id, verse = 0) {
   ui.fix = null;
   ui.rhy = null;
@@ -1771,6 +1792,10 @@ function renderSettings() {
   $('#guideWrap').hidden = !(guide.buffer && guide.id === song.guideId);
   $('#syncBtn').hidden = !(song.importInfo?.lyrics?.trim() && guide.buffer && guide.id === song.guideId);
   $('#listen').value = listenMode();
+  $('#modeBtn').textContent = song.mode === 'minor' ? '明るくする（短調 → 長調）' : '暗くする（長調 → 短調）';
+  $('#modeBtn').title = song.mode === 'minor'
+    ? '曲全体を、同じ主音の長調に直します。メロディの一部の音が半音上がり、コードは付け直します'
+    : '曲全体を、同じ主音の短調に直します。メロディの一部の音が半音下がり、コードは付け直します';
   $('#adv').value = Math.round(song.adventure * 100);
   $('#defLen').value = song.defLen;
   $('#snap').value = ui.snap;
@@ -4541,6 +4566,11 @@ $('#harmBtn').onclick = () => {
 };
 $('#fixBtn').onclick = openFix;
 $('#rhyBtn').onclick = openRhythm;
+$('#modeBtn').onclick = () => {
+  const to = song.mode === 'minor' ? 'major' : 'minor';
+  if (!confirm(`曲全体を、${to === 'major' ? '長調（明るい響き）' : '短調（暗い響き）'}に直します。\nメロディの一部の音が半音${to === 'major' ? '上がり' : '下がり'}、コードは付け直します。（↶ で戻せます）`)) return;
+  changeMode(to);
+};
 $('#syncBtn').onclick = openSync;
 $('#syncStart').onclick = () => { if (sync.src) { syncStop(); renderSync(); } else syncStart(); };
 $('#syncCancel').onclick = () => { syncStop(); $('#syncModal').hidden = true; };
