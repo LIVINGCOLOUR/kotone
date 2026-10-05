@@ -11,7 +11,7 @@
 
 ## 紹介動画
 
-### 歌って作る（3分49秒）
+### 歌って作る（3分24秒）
 
 [![Kotone 紹介動画：歌詞を入れ、マイクに向かって歌い、できたメロディを整えて書き出す様子](media/kotone-sing-thumb.jpg)](https://kotonemusic.pages.dev/sing.mp4)
 

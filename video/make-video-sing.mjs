@@ -231,10 +231,19 @@ await cap('伴奏もメトロノームもありません。好きな速さで歌
 await spot('.imp-rec', 4);
 await sleep(7000);
 await spot(null);
-await cap('途中で速くなっても、音を外しても、大丈夫。あとで整えられます');
-await sleep(9000);
-await cap(REAL ? '思いついた節で、自由に歌っています' : '（この動画では、合成した声を使っています）');
-await sleep(Math.max(1000, voice.seconds * 1000 - 18500 - 900));
+await cap(REAL ? '思いついた節で、自由に歌っています。途中で速くなっても、音を外しても、大丈夫' : '途中で速くなっても、音を外しても、大丈夫。あとで整えられます（声は合成です）');
+// 歌は3行目の途中まで聞かせて、残りは早送りにする（録音の時間の表示だけ、速く進める）
+const FF_AT = REAL ? 16.5 : 12;                            // 録音を始めてから、早送りに入るまでの秒数
+await sleep(FF_AT * 1000 - 9500);
+mark('ff');
+await cap('このあとも、最後まで歌います');
+await ov('ff', true);
+await page.evaluate(async total => {
+  const steps = 44, left = total * 1000 - (performance.now() - impRec.t0);
+  for (let i = 0; i < steps; i++) { impRec.t0 -= left / steps; await new Promise(r => setTimeout(r, 50)); }
+}, voice.seconds);
+await sleep(300);
+await ov('ff', false);
 await cap('歌い終わったら、録音を止めて「読み込む」');
 await click('#impRec', 500);
 await sleep(1200);
@@ -405,7 +414,7 @@ await sleep(7500);
 await cdp.send('Page.stopScreencast');
 const endTs = Date.now() / 1000;
 const t0 = frames[0].ts;
-const rendered = await page.evaluate(async ({ t0, endTs, recAt }) => {
+const rendered = await page.evaluate(async ({ t0, endTs, recAt, ffAt }) => {
   const SR = 48000;
   const raw = __clock, H = 5;
   const diffs = raw.map(([c, w]) => w - c);
@@ -425,13 +434,14 @@ const rendered = await page.evaluate(async ({ t0, endTs, recAt }) => {
   ctx = off;
   master = off.createGain(); master.gain.value = 0.7;
   master.connect(off.createDynamicsCompressor()).connect(off.destination);
-  const voiceAt = (at, offset, dur, gain) => {            // 歌声（録音の場面と、元の歌の再生）
+  const voiceAt = (at, offset, dur, gain, fade = 0) => {   // 歌声（録音の場面と、元の歌の再生）
     const s = off.createBufferSource(), g = off.createGain();
     s.buffer = guide.buffer; g.gain.value = gain;
+    if (fade) { g.gain.setValueAtTime(gain, at + dur - fade); g.gain.linearRampToValueAtTime(0, at + dur); }
     s.connect(g).connect(off.destination);
     if (dur === undefined) s.start(at, offset); else s.start(at, offset, dur);
   };
-  voiceAt(recAt - t0 + 0.25, 0, undefined, 0.9);          // 録音の場面：歌っている声を聞かせる
+  voiceAt(recAt - t0 + 0.25, 0, ffAt - recAt + 0.4, 0.9, 0.6);   // 録音の場面：歌っている声を、早送りに入る所まで聞かせる
   let used = 0;
   for (const e of __ev) {
     const cut = e.o ? __cuts.get(e.o) : undefined;
@@ -459,7 +469,7 @@ const rendered = await page.evaluate(async ({ t0, endTs, recAt }) => {
   for (let i = 0; i < n; i++) { wav.setInt16(44 + i * 4, clip(L[i]), true); wav.setInt16(46 + i * 4, clip(R[i]), true); }
   window.__wav = new Uint8Array(wav.buffer);
   return { events: __ev.length, used, guide: __ev.filter(e => e.k === 'g').length, cuts: __cuts.size, bytes: __wav.length };
-}, { t0, endTs, recAt: marks.rec });
+}, { t0, endTs, recAt: marks.rec, ffAt: marks.ff });
 console.log('rendered audio:', JSON.stringify(rendered));
 // WAV は大きいので、少しずつ受け取る
 const parts = [];
