@@ -3344,9 +3344,28 @@ async function analyzeVoice(file, lyricsText, opts, progress, starts = null) {
       l.notes = N.filter(n => n.t0 >= a && n.t0 < b).map(n => ({ ...n }));
     });
   } else {
-  // 動的計画法：各行に連続するフレーズを1〜4個。音符の数と歌詞の音の数の差、
-  // および「歌詞の音の数に比例した長さ」からのずれを小さく。歌詞と関係ないフレーズ（前置き・咳など）は飛ばせる
-  const P = phrases.length, L = lines.length, INF = 1e9;
+  // 動的計画法：各行に、連続するまとまりを割り当てる。音符の数と歌詞の音の数の差、
+  // および「歌詞の音の数に比例した長さ」からのずれを小さく。歌詞と関係ないフレーズ（前置き・咳など）は飛ばせる。
+  // 2行を息を切らずに続けて歌うと、1つのフレーズに2行が入る。そこで、どの歌詞の行よりもはっきり長いフレーズ（音の数が、
+  // いちばん長い行の 1.3 倍を超える）だけは、短い息つぎ（0.1秒以上の切れ目）や伸ばした音の所で、さらに分けておき、
+  // その分け目でも行を分けられるようにする。ふつうの長さのフレーズは、今までどおり途中では分けない
+  const SOFT = opts.softCut ?? 2, longPhrase = 1.3 * Math.max(...lines.map(l => l.mora));
+  const units = [];
+  for (const ph of phrases) {
+    const ioi = ph.slice(0, -1).map((n, i) => ph[i + 1].t0 - n.t0), m = ioi.length ? medOf(ioi) : 0;
+    let cur = [];
+    ph.forEach((n, i) => {
+      cur.push(n);
+      const nx = ph[i + 1];
+      if (!nx) return;
+      if (ph.length > longPhrase && (nx.t0 - n.t1 >= 0.1 || nx.t0 - n.t0 >= 1.7 * m)) { units.push({ ns: cur, hard: units.length === 0 || cur[0] === ph[0] }); cur = []; }
+    });
+    units.push({ ns: cur, hard: cur[0] === ph[0] });
+  }
+  const P = units.length, L = lines.length, INF = 1e9;
+  // 飛ばすのは、フレーズ丸ごとだけ（フレーズの頭から、次のフレーズの頭まで）
+  const nextHard = new Array(P + 1).fill(P);
+  for (let j = P - 1; j >= 0; j--) nextHard[j] = units[j + 1]?.hard || j + 1 === P ? j + 1 : nextHard[j + 1];
   const totalMora = lines.reduce((a, l) => a + l.mora, 0) || 1;
   const rate = phrases.reduce((a, p) => a + (p[p.length - 1].t1 - p[0].t0), 0) / totalMora; // 1音あたりの秒数（平均）
   const dp = Array.from({ length: L + 1 }, () => new Array(P + 1).fill(INF));
@@ -3354,13 +3373,22 @@ async function analyzeVoice(file, lyricsText, opts, progress, starts = null) {
   dp[0][0] = 0;
   for (let i = 0; i <= L; i++) for (let j = 0; j <= P; j++) {
     if (dp[i][j] >= INF) continue;
-    if (j < P) { const c = dp[i][j] + 3 + phrases[j].length; if (c < dp[i][j + 1]) { dp[i][j + 1] = c; back[i][j + 1] = { skip: true }; } }
+    if (j < P && units[j].hard) {
+      const e = nextHard[j];
+      let len = 0; for (let q = j; q < e; q++) len += units[q].ns.length;
+      const c = dp[i][j] + 3 + len;
+      if (c < dp[i][e]) { dp[i][e] = c; back[i][e] = { skip: j }; }
+    }
     if (i < L) {
-      let cnt = 0;
-      for (let k = 1; k <= 4 && j + k <= P; k++) {
-        cnt += phrases[j + k - 1].length;
-        const dur = phrases[j + k - 1][phrases[j + k - 1].length - 1].t1 - phrases[j][0].t0;
-        const c = dp[i][j] + Math.abs(cnt - lines[i].mora) + (k - 1) * 0.5 + 3 * Math.abs(Math.log(dur / Math.max(0.2, lines[i].mora * rate)));
+      let cnt = 0, joins = 0;
+      for (let k = 1; j + k <= P; k++) {
+        const last = units[j + k - 1];
+        cnt += last.ns.length;
+        if (k > 1 && last.hard) joins++;                    // 行の中に入った、フレーズの切れ目の数
+        if (joins > 3) break;                               // 1行に入れるのは、フレーズ4つまで
+        const dur = last.ns[last.ns.length - 1].t1 - units[j].ns[0].t0;
+        const soft = j + k < P && !units[j + k].hard ? SOFT : 0;     // 行の終わりが、フレーズの途中
+        const c = dp[i][j] + Math.abs(cnt - lines[i].mora) + joins * 0.5 + soft + 3 * Math.abs(Math.log(dur / Math.max(0.2, lines[i].mora * rate)));
         if (c < dp[i + 1][j + k]) { dp[i + 1][j + k] = c; back[i + 1][j + k] = { from: j }; }
       }
     }
@@ -3368,8 +3396,8 @@ async function analyzeVoice(file, lyricsText, opts, progress, starts = null) {
   for (let i = L, j = P; i > 0 || j > 0;) {
     const b = back[i][j];
     if (!b) throw new Error('歌詞と歌の対応づけに失敗しました。');
-    if (b.skip) { j--; continue; }
-    lines[i - 1].notes = phrases.slice(b.from, j).flat().map(n => ({ ...n }));
+    if (b.skip !== undefined) { j = b.skip; continue; }
+    lines[i - 1].notes = units.slice(b.from, j).flatMap(x => x.ns).map(n => ({ ...n }));
     j = b.from; i--;
   }
   }

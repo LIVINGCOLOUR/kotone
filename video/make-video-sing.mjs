@@ -95,9 +95,19 @@ const VOICE = path.join(OUT, 'voice.wav');                 // マイクの代わ
 const REAL_VOICE = path.resolve('../songs/video/my-voice.m4a'), REAL = fs.existsSync(REAL_VOICE);
 let voice;
 if (REAL) {
-  // 人が歌った録音：前後の無音を切り、聞きやすい音量にそろえる
-  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-ss', '0.9', '-t', '45.4', '-i', REAL_VOICE, '-af', 'highpass=f=70,loudnorm=I=-18:TP=-2:LRA=11', '-ar', '48000', '-ac', '1', VOICE]);
-  voice = { seconds: +execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', VOICE]).toString(), real: true };
+  // 人が歌った録音：聞きやすい音量にそろえ、前後の無音を切る（声の前に0.5秒、後ろに0.7秒だけ残す）
+  const tmp = path.join(OUT, 'voice-full.wav');
+  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', REAL_VOICE, '-af', 'highpass=f=70,loudnorm=I=-18:TP=-2:LRA=11', '-ar', '48000', '-ac', '1', tmp]);
+  const dur = +execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', tmp]).toString();
+  let log = '';
+  try { execFileSync('ffmpeg', ['-hide_banner', '-i', tmp, '-af', 'silencedetect=noise=-30dB:d=0.4', '-f', 'null', '-'], { stdio: ['ignore', 'ignore', 'pipe'] }); } catch (e) { log = String(e.stderr || ''); }
+  if (!log) log = execFileSync('sh', ['-c', `ffmpeg -hide_banner -i "${tmp}" -af silencedetect=noise=-30dB:d=0.4 -f null - 2>&1`]).toString();
+  const sil = [...log.matchAll(/silence_start: ([\d.]+)[\s\S]*?silence_end: ([\d.]+)/g)].map(m => [+m[1], +m[2]]);
+  const tail = log.match(/silence_start: ([\d.]+)(?![\s\S]*silence_end)/);
+  const from = sil.length && sil[0][0] < 0.05 ? Math.max(0, sil[0][1] - 0.5) : 0;
+  const to = tail ? Math.min(dur, +tail[1] + 0.7) : dur;
+  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-ss', from.toFixed(2), '-t', (to - from).toFixed(2), '-i', tmp, '-c', 'copy', VOICE]);
+  voice = { seconds: +(to - from).toFixed(2), real: true, trimmedFrom: +from.toFixed(2) };
 } else voice = writeVoice(VOICE);
 console.log('voice:', JSON.stringify(voice));
 
