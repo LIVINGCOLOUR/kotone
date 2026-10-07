@@ -2,7 +2,7 @@
 
 コード進行・メロディ・歌詞をひとつの画面で作れる、J-POP向けの作曲ツールです（Kotone ＝ 言＋音）。
 
-**Web 版：https://kotonemusic.pages.dev** ／ 使い方：https://kotonemusic.pages.dev/manual
+**Web 版：https://kotonemusic.pages.dev**（アプリは https://kotonemusic.pages.dev/app/）／ 使い方：https://kotonemusic.pages.dev/app/manual
 
 - コードを選ぶと、J-POPの定番の流れから次のコードを提案（王道進行・小室進行などの続きも検出）
 - ピアノロールでメロディを作り、歌詞レーンで音符と歌詞の結びつきを見ながら作曲
@@ -31,7 +31,12 @@
 
 ## Web 版へのデプロイ
 
-Cloudflare Pages（プロジェクト名 `kotonemusic`）で公開しています。`npx wrangler login` 済みの状態で、次を実行するとアプリ・マニュアル・紹介動画だけがデプロイされます。
+Cloudflare Pages（プロジェクト名 `kotonemusic`）で公開しています。`npx wrangler login` 済みの状態で、次を実行するとトップページ・アプリ・マニュアル・紹介動画だけがデプロイされます。
+
+- `https://kotonemusic.pages.dev/` … トップページ（`site/index.html`。紹介動画2本と、アプリへのリンク）
+- `https://kotonemusic.pages.dev/app/` … アプリ（`index.html`）。マニュアルは `/app/manual.html`（前の `/manual.html` は転送されます）
+
+`./deploy.sh --build-only` で、デプロイせずに `dist/` だけを作れます。
 
 ```sh
 ./deploy.sh

@@ -1,0 +1,110 @@
+<!doctype html>
+<!-- Kotone のトップページ（https://kotonemusic.pages.dev/）。アプリは /app/。deploy.sh で dist/ に組み立てる -->
+<html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Crect width=%2264%22 height=%2264%22 rx=%2214%22 fill=%22%23d9485f%22/%3E%3Cpath d=%22M26 44V16l20-4v28%22 fill=%22none%22 stroke=%22white%22 stroke-width=%225%22 stroke-linejoin=%22round%22/%3E%3Ccircle cx=%2220%22 cy=%2244%22 r=%227%22 fill=%22white%22/%3E%3Ccircle cx=%2240%22 cy=%2240%22 r=%227%22 fill=%22white%22/%3E%3C/svg%3E">
+<title>Kotone｜歌うと、曲になる。</title>
+<meta name="description" content="歌詞を見ながら歌った声や鼻歌から、メロディとコードの下書きを作る、無料の作曲アプリ。PC の Chrome で使えます。">
+<meta property="og:title" content="Kotone｜歌うと、曲になる。">
+<meta property="og:description" content="歌った声や鼻歌から、メロディとコードの下書きを作る、無料の作曲アプリ。">
+<meta property="og:image" content="https://kotonemusic.pages.dev/sing-thumb.jpg">
+<style>
+  :root { --accent: #d9485f; --text: #1f2328; --muted: #6b7280; --bg: #faf8f5; --card: #fff; --line: #ece8e2; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif; line-height: 1.7; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 32px; }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; }
+  .logo { font-size: 24px; font-weight: 800; color: var(--accent); letter-spacing: .02em; }
+  nav a { color: var(--muted); text-decoration: none; margin-left: 24px; font-size: 14px; }
+  .hero { display: grid; grid-template-columns: 1.1fr .9fr; gap: 40px; align-items: center; padding: 48px 0 56px; }
+  h1 { font-size: 46px; line-height: 1.25; margin: 0 0 16px; }
+  .lead { font-size: 17px; color: #444; margin: 0 0 28px; }
+  .cta { display: inline-block; background: var(--accent); color: #fff; padding: 16px 30px; border-radius: 999px; font-weight: 700; font-size: 17px; text-decoration: none; box-shadow: 0 8px 20px rgba(217,72,95,.3); }
+  .note { font-size: 13px; color: var(--muted); margin-top: 12px; }
+  .heroimg { border-radius: 16px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,.15); border: 1px solid var(--line); }
+  .heroimg img { width: 100%; display: block; }
+  h2 { font-size: 26px; margin: 0 0 6px; } .sub { color: var(--muted); margin: 0 0 24px; }
+  section { padding: 48px 0; border-top: 1px solid var(--line); }
+  .videos { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .vcard { background: var(--card); border-radius: 16px; overflow: hidden; border: 1px solid var(--line); box-shadow: 0 6px 18px rgba(0,0,0,.05); }
+  .thumb { position: relative; } .thumb img { width: 100%; display: block; aspect-ratio: 16/9; object-fit: cover; }
+  .play { position: absolute; inset: 0; margin: auto; width: 68px; height: 68px; border-radius: 50%; background: rgba(255,255,255,.92); display: grid; place-items: center; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+  .play::after { content: ""; border-left: 22px solid var(--accent); border-top: 14px solid transparent; border-bottom: 14px solid transparent; margin-left: 6px; }
+  .dur { position: absolute; right: 10px; bottom: 10px; background: rgba(0,0,0,.7); color: #fff; font-size: 12px; padding: 2px 8px; border-radius: 6px; }
+  .vbody { padding: 18px 22px 22px; } .tag { display: inline-block; font-size: 12px; font-weight: 700; color: var(--accent); background: #fde8ec; padding: 2px 10px; border-radius: 999px; margin-bottom: 6px; }
+  .vbody h3 { margin: 0 0 6px; font-size: 19px; } .vbody p { margin: 0; color: #555; font-size: 14px; }
+  .steps { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; } .steps span { font-size: 12px; background: #f2efea; padding: 2px 8px; border-radius: 6px; color: #555; }
+  .feat { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .fcard { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px; }
+  .fcard .ic { font-size: 28px; } .fcard h3 { margin: 6px 0; font-size: 17px; } .fcard p { margin: 0; color: #555; font-size: 14px; }
+  .end { text-align: center; padding: 56px 0 64px; } .end h2 { margin-bottom: 18px; }
+  footer { border-top: 1px solid var(--line); padding: 20px 0 32px; color: var(--muted); font-size: 13px; display: flex; justify-content: space-between; }
+  .rel { position: relative; }
+  button.thumb { all: unset; display: block; position: relative; cursor: pointer; width: 100%; }
+  button.thumb:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+  .thumb video { width: 100%; display: block; aspect-ratio: 16/9; background: #000; }
+  .vcard:hover .play { transform: scale(1.06); } .play { transition: transform .15s; }
+  a { color: var(--accent); }
+  @media (max-width: 760px) {
+    .wrap { padding: 0 16px; } nav a { margin-left: 14px; }
+    .hero { grid-template-columns: 1fr; gap: 24px; padding: 24px 0 36px; } h1 { font-size: 34px; }
+    .videos, .feat { grid-template-columns: 1fr; }
+  }
+</style>
+<body>
+<div class="wrap">
+  <header><div class="logo">Kotone</div><nav><a href="#videos">動画</a><a href="app/manual.html">使い方</a><a href="app/">アプリを開く</a></nav></header>
+
+  <div class="hero">
+    <div>
+      <h1>歌うと、<br>曲になる。</h1>
+      <p class="lead">歌詞を見ながら歌った声や鼻歌から、メロディとコードの下書きを作ります。楽器も楽譜もいりません。</p>
+      <a class="cta" href="app/">▶ アプリを開く（無料）</a>
+      <div class="note">PC の Chrome でお使いください。登録はいりません。</div>
+    </div>
+    <div class="heroimg"><img src="sing-thumb.jpg" alt="Kotone の画面：歌から作ったメロディとコード"></div>
+  </div>
+
+  <section id="videos">
+    <h2>作り方を動画で見る</h2>
+    <p class="sub">実際の画面で、1曲できるまでを紹介しています。</p>
+    <div class="videos">
+      <div class="vcard">
+        <button class="thumb" data-src="sing.mp4" data-poster="sing-thumb.jpg" aria-label="動画「歌って作る」を再生"><img src="sing-thumb.jpg" alt=""><div class="play"></div><div class="dur">2:18</div></button>
+        <div class="vbody"><div class="tag">おすすめ</div><h3>歌って作る</h3><p>歌詞を入れて歌うと、メロディの下書きができます。整えて、直して、完成まで。歌詞がなくても、鼻歌で作れます。</p>
+          <div class="steps"><span>歌詞を入れる</span><span>歌う</span><span>音符になる</span><span>整える</span><span>直す</span><span>完成</span></div></div>
+      </div>
+      <div class="vcard">
+        <button class="thumb" data-src="intro.mp4" data-poster="intro-thumb.jpg" aria-label="動画「コードを選んで、鍵盤で作る」を再生"><img src="intro-thumb.jpg" alt=""><div class="play"></div><div class="dur">2:56</div></button>
+        <div class="vbody"><div class="tag" style="background:#e8f0fd;color:#3b6fd8">楽器が少しできる人に</div><h3>コードを選んで、鍵盤で作る</h3><p>コード進行を選び、PC のキーボードでメロディを弾いて録音します。</p>
+          <div class="steps"><span>歌詞を貼る</span><span>コードを選ぶ</span><span>メロディを弾く</span><span>通して聴く</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>できること</h2>
+    <p class="sub">思いついたメロディを、そのまま曲に。はじめての人も、気軽にどうぞ。</p>
+    <div class="feat">
+      <div class="fcard"><div class="ic">🎤</div><h3>歌うだけで下書き</h3><p>伴奏なしで、自分の速さで歌えます。音がずれても、あとで整えて直せます。</p></div>
+      <div class="fcard"><div class="ic">🎹</div><h3>コードと伴奏も自動</h3><p>メロディに合うコードを付け、ピアノやギター、ドラムで鳴らします。</p></div>
+      <div class="fcard"><div class="ic">📄</div><h3>歌詞カードと楽譜</h3><p>コード付きの歌詞カード、ピアノ譜、MP3 を書き出して、持ち帰れます。</p></div>
+    </div>
+  </section>
+
+  <div class="end">
+    <h2>さっそく作ってみる</h2>
+    <a class="cta" href="app/">▶ アプリを開く（無料）</a>
+    <div class="note"><a href="app/manual.html" style="color:var(--muted)">使い方（マニュアル）</a></div>
+  </div>
+  <footer><span>Kotone</span><span><a href="app/" style="color:inherit">アプリを開く</a></span></footer>
+</div>
+<script>
+// 動画は、カードの中でそのまま再生する
+document.querySelectorAll('button.thumb').forEach(b => b.addEventListener('click', () => {
+  const v = document.createElement('video');
+  v.src = b.dataset.src; v.poster = b.dataset.poster; v.controls = true; v.autoplay = true; v.playsInline = true;
+  const box = document.createElement('div'); box.className = 'thumb'; box.append(v);
+  b.replaceWith(box);
+}));
+</script>
+</body></html>
